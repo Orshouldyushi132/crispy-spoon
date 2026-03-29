@@ -1,5 +1,6 @@
-﻿.git/
+.git/
 .gitignore
+.wrangler/
 functions/
 worker/
 README.md
