@@ -81,6 +81,27 @@ function restBase(env) {
   return `${String(env.SUPABASE_URL || "").replace(/\/$/, "")}/rest/v1`;
 }
 
+function friendlySupabaseError(text) {
+  if (!text) return "Supabase request failed.";
+  try {
+    const payload = JSON.parse(text);
+    if (payload?.code === "PGRST205") {
+      const match = /'([^']+)'/.exec(String(payload.message || ""));
+      const table = match?.[1] || "必要なテーブル";
+      return `Supabase にテーブル ${table} がありません。Supabase の SQL Editor で supabase-setup.sql を最後まで実行してください。`;
+    }
+    if (typeof payload?.message === "string" && payload.message.trim()) {
+      return payload.message;
+    }
+    if (typeof payload?.error === "string" && payload.error.trim()) {
+      return payload.error;
+    }
+  } catch {
+    // Fall back to raw text when the response is not JSON.
+  }
+  return text;
+}
+
 async function supabaseRequest(env, path, init = {}) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new HttpError(500, "Supabase service role is not configured.");
@@ -98,7 +119,7 @@ async function supabaseRequest(env, path, init = {}) {
   if (response.status === 204) return null;
   const text = await response.text();
   if (!response.ok) {
-    throw new HttpError(response.status, text || "Supabase request failed.");
+    throw new HttpError(response.status, friendlySupabaseError(text || "Supabase request failed."));
   }
   return text ? JSON.parse(text) : null;
 }
