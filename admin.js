@@ -1,4 +1,4 @@
-﻿const API_BASE = "/api/admin";
+const API_BASE = "/api/admin";
 const DEF = { event_date: "2026-08-18", official_name: "全てお米の所為です。", official_url: "https://www.youtube.com/@or_should_rice", event_hashtag: "", x_search_url: "", live_playlist_url: "", archive_playlist_url: "", entry_close_minutes: 15 };
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -45,6 +45,7 @@ const safeUrl = (value, allowEmpty = false) => {
   }
 };
 let sessionState = null;
+let sessionInfo = { discordConfigured: true, missingDiscordEnv: [] };
 let appReady = false;
 let lastRefreshKey = "";
 
@@ -57,6 +58,12 @@ function setMsg(el, message, type = "") {
 function setAuthBadge(label, type = "pending") {
   els.authState.textContent = label;
   els.authState.className = `badge ${type}`;
+}
+
+function formatMissingDiscordEnv(list) {
+  return Array.isArray(list) && list.length
+    ? list.join(" / ")
+    : "ADMIN_SESSION_SECRET / DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET";
 }
 
 function formatDate(value) {
@@ -164,17 +171,23 @@ function applySessionUi(data) {
   const session = data?.session || null;
   const linked = Boolean(session?.discordUser);
   const unlocked = Boolean(session?.reviewUnlocked);
+  sessionInfo = {
+    discordConfigured: Boolean(data?.discordConfigured),
+    missingDiscordEnv: Array.isArray(data?.missingDiscordEnv) ? data.missingDiscordEnv.filter(Boolean) : [],
+  };
   sessionState = session;
   els.reviewPassword.disabled = !linked || unlocked;
   els.unlockReview.disabled = !linked || unlocked;
   els.signOut.hidden = !linked;
-  els.discordConnect.disabled = !data?.discordConfigured;
-  if (!data?.discordConfigured) {
+  els.discordConnect.disabled = false;
+  els.discordConnect.textContent = sessionInfo.discordConfigured ? "Discordで認証" : "Discord設定を確認";
+  if (!sessionInfo.discordConfigured) {
+    const missing = formatMissingDiscordEnv(sessionInfo.missingDiscordEnv);
     setAuthBadge("設定待ち", "rejected");
-    els.authHint.textContent = "Discord 認証用の Cloudflare 環境変数が未設定です。";
-    els.authUser.textContent = "DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET / ADMIN_SESSION_SECRET を設定してください。";
+    els.authHint.textContent = "Discord 認証を有効にするための Cloudflare 環境変数がまだ足りません。";
+    els.authUser.textContent = `不足している設定: ${missing}`;
     els.discordAccountName.textContent = "未設定";
-    els.discordAccountMeta.textContent = "Cloudflare Functions の設定待ち";
+    els.discordAccountMeta.textContent = "Cloudflare の Discord 設定待ち";
     els.reviewerIdentity.textContent = "Discord認証の設定完了後に、承認操作のアカウント表示が有効になります。";
     els.app.hidden = true;
     return;
@@ -246,6 +259,11 @@ function consumeQueryNotice() {
 }
 
 els.discordConnect.addEventListener("click", () => {
+  if (!sessionInfo.discordConfigured) {
+    const missing = formatMissingDiscordEnv(sessionInfo.missingDiscordEnv);
+    setMsg(els.authStatus, `Discord認証はまだ有効になっていません。Cloudflare に ${missing} を設定してから「状態を再確認」を押してください。`, "err");
+    return;
+  }
   window.location.href = `${API_BASE}/discord/start`;
 });
 

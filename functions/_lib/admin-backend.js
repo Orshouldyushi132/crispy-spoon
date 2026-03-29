@@ -1,4 +1,4 @@
-﻿import { readAdminSession } from "./session.js";
+import { readAdminSession } from "./session.js";
 
 const TABLES = {
   entries: "kome_prerush_entries",
@@ -38,8 +38,19 @@ export function errorResponse(message, status = 400) {
   return jsonResponse({ ok: false, error: message }, { status });
 }
 
+export function getDiscordConfigState(env) {
+  const missing = [];
+  if (!env.ADMIN_SESSION_SECRET) missing.push("ADMIN_SESSION_SECRET");
+  if (!env.DISCORD_CLIENT_ID) missing.push("DISCORD_CLIENT_ID");
+  if (!env.DISCORD_CLIENT_SECRET) missing.push("DISCORD_CLIENT_SECRET");
+  return {
+    configured: missing.length === 0,
+    missing,
+  };
+}
+
 export function isDiscordConfigured(env) {
-  return Boolean(env.ADMIN_SESSION_SECRET && env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET);
+  return getDiscordConfigState(env).configured;
 }
 
 export function isAdminApiConfigured(env) {
