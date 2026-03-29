@@ -1,4 +1,4 @@
-const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",AT="kome_prerush_admins",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",ALLOW_LOCAL_ADMIN_FALLBACK=false;
+﻿const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",AT="kome_prerush_admins",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",ALLOW_LOCAL_ADMIN_FALLBACK=false;
 const DEF={event_date:"2026-08-18",official_name:"全てお米の所為です。",official_url:"https://www.youtube.com/@or_should_rice",event_hashtag:"",x_search_url:"",live_playlist_url:"",archive_playlist_url:"",entry_close_minutes:15};
 const $=id=>document.getElementById(id),els={page:$("pageStatus"),app:$("adminApp"),authForm:$("authForm"),authStatus:$("authStatus"),authState:$("authState"),authHint:$("authHint"),authUser:$("authUser"),loginEmail:$("loginEmail"),loginPassword:$("loginPassword"),magicLink:$("magicLinkBtn"),refreshSession:$("refreshSessionBtn"),signOut:$("signOutBtn"),setForm:$("settingsForm"),offForm:$("officialForm"),setStatus:$("settingsStatus"),offStatus:$("officialStatus"),admin:$("adminBody"),official:$("officialBody"),sumDate:$("sumDate"),sumPending:$("sumPending"),sumOfficial:$("sumOfficial")};
 const shared=!!(SUPABASE_URL&&SUPABASE_ANON_KEY&&window.supabase),sb=shared?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null,localAdminMode=!shared&&ALLOW_LOCAL_ADMIN_FALLBACK;
@@ -31,7 +31,7 @@ function drawSummary(entries,official,settings){els.sumDate.textContent=fmtDate(
 
 function lockApp(msg,type="pending"){els.app.hidden=true;setAuthBadge(type==="approved"?"管理者ログイン中":msg,type);if(type!=="approved")setMsg(els.page,msg,type==="rejected"?"err":"")}
 async function requireAdmin(){if(localAdminMode)return true;if(isAdmin)return true;await syncAuthState(true);if(isAdmin)return true;setMsg(els.page,"先に管理者としてログインしてください。","err");return false}
-async function refresh(force=false){if(!localAdminMode&&!isAdmin)return;const refreshKey=localAdminMode?"local":String(currentUser?.id||"");if(!force&&refreshKey&&refreshKey===lastRefreshKey)return;const [entries,official,settings]=await Promise.all([getEntries(),getOfficial(),getSettings()]);fillSettings(settings);drawOfficial(official);drawEntries(entries);drawSummary(entries,official,settings);lastRefreshKey=refreshKey}
+async function refresh(force=false){if(!localAdminMode&&!isAdmin)return;const refreshKey=localAdminMode?"local":String(currentUser?.id||"");if(!force&&refreshKey&&refreshKey===lastRefreshKey)return;const [entries,official,settings]=await Promise.all([getEntries(),getOfficial(),getSettings()]);fillSettings(settings);drawOfficial(official);drawEntries(entries);drawSummary(entries,official,settings);window.refreshSiteMotion?.(document);lastRefreshKey=refreshKey}
 
 async function syncAuthState(force=false){
   if(localAdminMode){
@@ -138,3 +138,4 @@ els.offForm.addEventListener("submit",async e=>{e.preventDefault();if(!await req
 
 if(shared)sb.auth.onAuthStateChange(()=>{setTimeout(()=>{syncAuthState(true).catch(err=>setMsg(els.page,"認証更新に失敗しました: "+(err.message||err),"err"))},0)});
 syncAuthState(true).catch(err=>setMsg(els.page,"読み込みに失敗したよ: "+(err.message||err),"err"));
+
