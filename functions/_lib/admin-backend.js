@@ -145,6 +145,24 @@ export function publicSession(session) {
   };
 }
 
+function withDefaultSettings(row) {
+  return row ? { ...DEFAULT_SETTINGS, ...row } : { ...DEFAULT_SETTINGS };
+}
+
+export async function getPublicSnapshot(env) {
+  const [entries, official, settingsRows] = await Promise.all([
+    supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&status=eq.approved&order=start_time.asc`),
+    supabaseRequest(env, `${TABLES.official}?select=id,title,start_time,url,note,created_at&order=start_time.asc`),
+    supabaseRequest(env, `${TABLES.settings}?select=id,event_date,official_name,official_url,event_hashtag,x_search_url,live_playlist_url,archive_playlist_url,entry_close_minutes&id=eq.default`),
+  ]);
+  return {
+    ok: true,
+    entries: entries || [],
+    official: official || [],
+    settings: withDefaultSettings(settingsRows?.[0]),
+  };
+}
+
 export async function getAdminSnapshot(env) {
   const [entries, official, settingsRows] = await Promise.all([
     supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&order=created_at.asc`),
@@ -155,8 +173,64 @@ export async function getAdminSnapshot(env) {
     ok: true,
     entries: entries || [],
     official: official || [],
-    settings: settingsRows?.[0] ? { ...DEFAULT_SETTINGS, ...settingsRows[0] } : { ...DEFAULT_SETTINGS },
+    settings: withDefaultSettings(settingsRows?.[0]),
   };
+}
+
+export async function createPublicEntry(env, body) {
+  const artist = String(body.artist || "").trim();
+  const title = String(body.title || "").trim();
+  const parentSlot = Number(body.parent_slot);
+  const startTime = String(body.start_time || "").trim();
+  const url = safeUrl(body.url, false);
+  const note = String(body.note || "").trim();
+
+  if (!artist || artist.length > 80) {
+    throw new HttpError(400, "投稿名義は 1〜80 文字で入力してください。");
+  }
+  if (!title || title.length > 120) {
+    throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
+  }
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 5) {
+    throw new HttpError(400, "レーンは 1〜5 から選んでください。");
+  }
+  if (!okTime(startTime)) {
+    throw new HttpError(400, "開始時刻の形式が正しくありません。");
+  }
+  if (!url) {
+    throw new HttpError(400, "公開 URL を入力してください。");
+  }
+  if (note.length > 300) {
+    throw new HttpError(400, "補足は 300 文字以内で入力してください。");
+  }
+
+  const existing = await supabaseRequest(
+    env,
+    `${TABLES.entries}?select=id&status=eq.approved&parent_slot=eq.${parentSlot}&start_time=eq.${encodeURIComponent(startTime)}&limit=1`,
+  );
+  if (Array.isArray(existing) && existing.length) {
+    throw new HttpError(409, "そのレーン・時間にはすでに掲載済みの動画があります。");
+  }
+
+  const payload = {
+    id: String(body.id || crypto.randomUUID()),
+    artist,
+    title,
+    parent_slot: parentSlot,
+    start_time: startTime,
+    url,
+    note,
+    status: "pending",
+    created_at: new Date().toISOString(),
+  };
+
+  await supabaseRequest(env, TABLES.entries, {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify([payload]),
+  });
+
+  return { ok: true, entry: payload };
 }
 
 export async function saveSettings(env, payload) {

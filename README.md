@@ -1,7 +1,7 @@
 # 米プレラ サイト構成
 
-このリポジトリは、公開ページ `index.html` と管理ページ `admin.html` を中心にした静的サイトです。  
-公開ページは Supabase の公開データか `localStorage` を使って動き、管理ページは Cloudflare Workers / Pages Functions 経由で Discord 認証と審査操作を行います。
+このリポジトリは、公開ページ `index.html` と管理ページ `admin.html` を中心にした静的サイトです。
+公開ページは Cloudflare Workers / Pages Functions の公開 API を優先して使い、必要に応じて Supabase 公開キー直読みか `localStorage` にフォールバックします。管理ページは Cloudflare Workers / Pages Functions 経由で Discord 認証と審査操作を行います。
 
 ## ファイル
 
@@ -10,6 +10,7 @@
 - `admin.html`: 管理ページ UI
 - `admin.js`: 管理ページの Discord 認証フローと審査 UI
 - `functions/api/admin/*`: Pages Functions と Worker ルーターから呼び出す管理 API
+- `functions/api/public/*`: 公開ページが使う公開 API
 - `functions/_lib/*`: セッション管理と Supabase REST 共通処理
 - `worker/index.js`: `workers.dev` 用の API ルーター
 - `wrangler.toml`: Workers デプロイ設定
@@ -37,7 +38,8 @@
 
 ### 公開ページだけ確認したいとき
 
-`public.js` 先頭の `SUPABASE_URL` と `SUPABASE_ANON_KEY` が空なら、公開ページは `localStorage` モードで動きます。  
+同じオリジンで `/api/public/*` が動く環境なら、公開ページはそこから公開データ取得と参加登録送信を行います。
+HTML ファイルを単独で開くなど API がない確認環境では、`public.js` 先頭の `SUPABASE_URL` と `SUPABASE_ANON_KEY` が空のままなら `localStorage` モードで動きます。
 このとき使うキーは次のとおりです。
 
 - `kome_prerush_entries_local_v3`
@@ -47,12 +49,13 @@
 
 ### 管理ページも確認したいとき
 
-`admin.html` は `/api/admin/*` の Cloudflare Functions を前提にしています。  
+`admin.html` は `/api/admin/*` の Cloudflare Functions を前提にしています。
 HTML ファイルを単独で開くだけでは Discord 認証も審査操作も動きません。Cloudflare Pages か `wrangler dev` / `wrangler pages dev` など、API が同じオリジンで動く環境で確認してください。
 
 ## 公開データを Supabase で共有する
 
-`public.js` の先頭にある次の値を設定します。
+Cloudflare / Workers でこのリポジトリを動かす場合、公開ページは `/api/public/*` を使うので `public.js` の公開キー設定は必須ではありません。
+静的配信だけで公開 API を使わずに動かしたい場合は、`public.js` の先頭にある次の値を設定します。
 
 ```js
 const SUPABASE_URL = "ここに Project URL";
@@ -178,7 +181,7 @@ set event_date = excluded.event_date,
 
 ## 管理ページを Cloudflare + Discord 認証で動かす
 
-管理ページは `functions/api/admin/*` を通して動きます。  
+管理ページは `functions/api/admin/*` を通して動きます。
 このリポジトリには `worker/index.js` と `wrangler.toml` も含めてあり、`workers.dev` へ出す場合でも `/api/admin/*` が 404 にならないようにしてあります。
 ブラウザから直接 Supabase の管理権限を持たせず、Cloudflare Functions 側で Discord 認証済みセッションとレビュー用パスワードを確認してから、Supabase REST API に service role で接続します。
 

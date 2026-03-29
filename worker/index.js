@@ -1,10 +1,12 @@
-﻿import * as adminSession from "../functions/api/admin/session.js";
+import * as adminSession from "../functions/api/admin/session.js";
 import * as adminData from "../functions/api/admin/data.js";
 import * as adminEntries from "../functions/api/admin/entries.js";
 import * as adminLogout from "../functions/api/admin/logout.js";
 import * as adminOfficial from "../functions/api/admin/official.js";
 import * as adminSettings from "../functions/api/admin/settings.js";
 import * as adminVerifyPassword from "../functions/api/admin/verify-password.js";
+import * as publicData from "../functions/api/public/data.js";
+import * as publicEntries from "../functions/api/public/entries.js";
 import * as discordStart from "../functions/api/admin/discord/start.js";
 import * as discordCallback from "../functions/api/admin/discord/callback.js";
 
@@ -16,6 +18,8 @@ const ROUTES = [
   { path: "/api/admin/official", POST: adminOfficial.onRequestPost },
   { path: "/api/admin/settings", POST: adminSettings.onRequestPost },
   { path: "/api/admin/verify-password", POST: adminVerifyPassword.onRequestPost },
+  { path: "/api/public/data", GET: publicData.onRequestGet },
+  { path: "/api/public/entries", POST: publicEntries.onRequestPost },
   { path: "/api/admin/discord/start", GET: discordStart.onRequestGet },
   { path: "/api/admin/discord/callback", GET: discordCallback.onRequestGet },
 ];
