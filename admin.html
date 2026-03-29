@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>米プレラ | 管理ページ</title>
   <link rel="stylesheet" href="./pickers.css?v=3">
@@ -15,7 +15,7 @@
     .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.card{padding:22px}.hero{padding:32px;display:grid;grid-template-columns:1.06fr .94fr;gap:18px;overflow:hidden;position:relative}.hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 84% 18%,rgba(140,215,255,.12),transparent 22%),linear-gradient(120deg,rgba(255,255,255,.07),transparent 44%)}.hero>*{position:relative;z-index:1}.side,.panel{padding:22px;border-radius:24px;background:linear-gradient(145deg,rgba(18,24,33,.96),rgba(11,15,21,.82));border:1px solid rgba(255,255,255,.08)}
     .eyebrow{margin:0 0 12px;color:var(--cyan);font-size:.8rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}h1,h2{margin:0;font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;letter-spacing:.02em}h1{font-size:clamp(2.25rem,5vw,4.05rem);line-height:1.05}h2{font-size:clamp(1.34rem,3vw,2rem)}p{margin:0}.lead,.note,.small{color:var(--sub);line-height:1.85}.lead{margin:16px 0 0}.hero-note{margin-top:14px}.chips,.btns{display:flex;flex-wrap:wrap;gap:10px}.chip,.badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .stats{display:flex;flex-wrap:wrap;gap:10px}.stat{flex:1 1 120px;padding:16px;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}.stat strong{display:block;margin-top:8px;font-size:1.85rem;line-height:1}.grid{display:grid;grid-template-columns:380px 1fr;gap:18px;margin-top:18px}.stack{display:grid;gap:18px}.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.auth-list{margin:12px 0 0;padding-left:18px;color:var(--sub);line-height:1.8}
-    .section{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:10px}label{display:block;margin:14px 0 7px;font-size:.9rem;font-weight:800}input,textarea,select{width:100%;padding:13px 15px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font:inherit;outline:none}input:focus,textarea:focus,select:focus{border-color:rgba(140,215,255,.7);box-shadow:0 0 0 4px rgba(140,215,255,.1)}textarea{min-height:96px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .section{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:10px}label{display:block;margin:14px 0 7px;font-size:.9rem;font-weight:800}input,textarea,select{width:100%;padding:13px 15px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font:inherit;outline:none}input:focus,textarea:focus,select:focus{border-color:rgba(140,215,255,.7);box-shadow:0 0 0 4px rgba(140,215,255,.1)}input:disabled,textarea:disabled,select:disabled{opacity:.58;cursor:not-allowed}textarea{min-height:96px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .field-shell{position:relative}
     .field-shell input,.field-shell select{width:100%;padding:14px 88px 14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 14px 24px rgba(0,0,0,.16);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
     .field-shell select{appearance:none;-webkit-appearance:none;cursor:pointer}
@@ -23,7 +23,7 @@
     .field-shell input[type="time"]::-webkit-calendar-picker-indicator,.field-shell input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(84%) sepia(13%) saturate(714%) hue-rotate(164deg) brightness(102%) contrast(101%);opacity:.78}
     .field-shell .field-chip{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:7px 11px;border-radius:999px;border:1px solid rgba(140,215,255,.18);background:rgba(140,215,255,.1);color:var(--cyan);font-size:.68rem;font-weight:900;letter-spacing:.16em;pointer-events:none}
     .field-shell.select-shell:after{content:"";position:absolute;right:80px;top:50%;width:8px;height:8px;border-right:2px solid rgba(255,255,255,.48);border-bottom:2px solid rgba(255,255,255,.48);transform:translateY(-70%) rotate(45deg);pointer-events:none}
-    button{appearance:none;border:none;cursor:pointer;border-radius:999px;min-height:44px;padding:11px 16px;font:inherit;font-weight:900}.primary{background:linear-gradient(90deg,var(--cyan),var(--mint));color:#061018}.ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.08)}.approve{background:rgba(99,230,207,.12);color:var(--mint);border:1px solid rgba(99,230,207,.18)}.reject{background:rgba(255,136,148,.12);color:var(--red);border:1px solid rgba(255,136,148,.18)}.delete{background:rgba(243,177,74,.12);color:var(--amber);border:1px solid rgba(243,177,74,.18)}
+    button{appearance:none;border:none;cursor:pointer;border-radius:999px;min-height:44px;padding:11px 16px;font:inherit;font-weight:900}button:disabled{cursor:not-allowed;opacity:.58}.primary{background:linear-gradient(90deg,var(--cyan),var(--mint));color:#061018}.ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.08)}.approve{background:rgba(99,230,207,.12);color:var(--mint);border:1px solid rgba(99,230,207,.18)}.reject{background:rgba(255,136,148,.12);color:var(--red);border:1px solid rgba(255,136,148,.18)}.delete{background:rgba(243,177,74,.12);color:var(--amber);border:1px solid rgba(243,177,74,.18)}
     .status{min-height:1.5em;margin-top:12px;font-size:.92rem;font-weight:700}.status.ok{color:var(--green)}.status.err{color:var(--red)}
     .table{overflow:auto;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.02)}table{width:100%;min-width:960px;border-collapse:collapse}th,td{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top}th{background:rgba(255,255,255,.03);font-size:.84rem}tr:last-child td{border-bottom:none}.song{display:block;margin-bottom:4px;font-weight:900}.t{white-space:nowrap;font-weight:900}.url{word-break:break-all;color:var(--cyan);font-size:.9rem}.empty{padding:24px;color:var(--sub);text-align:center}.badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}.badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}.badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}.badge.rejected{background:rgba(255,136,148,.12);color:var(--red)}
     @media (max-width:1020px){.hero,.grid,.auth-grid{grid-template-columns:1fr}}@media (max-width:760px){.wrap{width:min(100% - 16px,100%);margin:12px auto 40px}.card{padding:18px;border-radius:22px}.stats,.btns,.chips{flex-direction:column}.btns button{width:100%}.row{grid-template-columns:1fr}input,textarea{font-size:16px}.table{overflow:visible;border:none;background:transparent}table{min-width:0;width:100%;display:block}thead{display:none}tbody{display:block}tr{display:block;margin-bottom:12px;padding:12px;border-radius:18px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}td{display:block;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.08);font-size:.93rem}td:last-child{border-bottom:none}td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--sub);font-size:.78rem;font-weight:900}.empty{display:block;padding:18px 12px;border-radius:16px}}
@@ -34,12 +34,12 @@
     <section class="card hero">
       <div>
         <p class="eyebrow">Admin Console</p>
-        <h1>Event Schedule<br>Manager</h1>
-        <p class="lead">参加登録の確認に加えて、「全てお米の所為です。」の公式予定とイベント日を管理できます。いまは Supabase Auth を前提に、認証済みかつ管理者メールに登録されたアカウントだけが編集できる形にしています。</p>
+        <h1>Discord認証で、<br>運営管理をひらく。</h1>
+        <p class="lead">Discord認証のあと、レビュー用パスワードを通すと審査と設定変更が開きます。現在ログイン中の Discord アカウントもこのページで確認できます。</p>
         <div class="chips">
-          <span class="chip">SETTINGS</span>
-          <span class="chip">OFFICIAL</span>
-          <span class="chip">REVIEW</span>
+          <span class="chip">Discord認証</span>
+          <span class="chip">レビュー解錠</span>
+          <span class="chip">掲載操作</span>
         </div>
         <div id="pageStatus" class="status"></div>
       </div>
@@ -57,39 +57,42 @@
     <section class="card" id="authCard" style="margin-top:18px">
       <div class="section">
         <div>
-          <p class="eyebrow">Secure Login</p>
-          <h2>管理ログイン</h2>
+          <p class="eyebrow">Discord Auth</p>
+          <h2>Discord認証とレビュー解錠</h2>
         </div>
       </div>
       <div class="auth-grid">
-        <form id="authForm" class="side">
-          <p class="small">静的HTMLのままでも、Supabase Auth のメールログインかマジックリンクで管理画面を守れます。</p>
-          <label for="loginEmail">管理メール</label>
-          <input id="loginEmail" name="loginEmail" type="email" autocomplete="username email" placeholder="admin@example.com">
-          <label for="loginPassword">パスワード</label>
-          <input id="loginPassword" name="loginPassword" type="password" autocomplete="current-password" placeholder="パスワードで入る場合のみ入力">
+        <div class="side">
+          <p class="small">先に Discord で認証すると、レビュー用パスワード欄が使えるようになります。パスワードが通ると、承認・差し戻し・削除と設定変更が開きます。</p>
+          <div class="btns" style="margin-top:16px">
+            <button class="primary" type="button" id="discordConnectBtn">Discordで認証</button>
+            <button class="ghost" type="button" id="refreshSessionBtn">状態を再確認</button>
+          </div>
+          <label for="reviewPassword">レビュー用パスワード</label>
+          <input id="reviewPassword" name="reviewPassword" type="password" autocomplete="current-password" placeholder="Discord認証後に入力できます" disabled>
           <div class="btns" style="margin-top:14px">
-            <button class="primary" type="submit">ログイン</button>
-            <button class="ghost" type="button" id="magicLinkBtn">マジックリンクを送る</button>
+            <button class="approve" type="button" id="unlockReviewBtn" disabled>審査モードを開く</button>
+            <button class="delete" type="button" id="signOutBtn" hidden>Discord連携を解除</button>
           </div>
           <div id="authStatus" class="status"></div>
-        </form>
+          <ul class="auth-list">
+            <li>Discord認証前は、審査モードは開きません。</li>
+            <li>レビュー用パスワードは Discord 認証後にだけ入力できます。</li>
+            <li>承認操作の近くに、現在ログイン中の Discord アカウントを表示します。</li>
+          </ul>
+        </div>
         <aside class="side">
           <p class="eyebrow">Session</p>
           <div class="btns" style="margin-bottom:12px">
-            <span class="badge pending" id="authState">未ログイン</span>
+            <span class="badge pending" id="authState">Discord未認証</span>
           </div>
-          <p class="small" id="authHint">このページの編集権限は、認証済みかつ管理者として許可されたメールにだけ開きます。</p>
-          <p class="small" id="authUser" style="margin-top:10px">サインインしていません。</p>
-          <div class="btns" style="margin-top:14px">
-            <button class="ghost" type="button" id="refreshSessionBtn">状態を再確認</button>
-            <button class="delete" type="button" id="signOutBtn" hidden>ログアウト</button>
+          <p class="small" id="authHint">Discord での認証が完了すると、ここに連携状態が表示されます。</p>
+          <div style="margin-top:14px;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+            <p class="small">連携中のDiscordアカウント</p>
+            <p style="margin-top:8px;font-size:1.2rem;font-weight:900" id="discordAccountName">未連携</p>
+            <p class="small" id="discordAccountMeta" style="margin-top:6px">Discord認証待ち</p>
           </div>
-          <ul class="auth-list">
-            <li>公開ページは anon 権限で読める範囲だけを表示します。</li>
-            <li>審査・設定変更・公式予定の編集は、管理者ログイン後だけ開きます。</li>
-            <li>管理者メールの許可は DB 側の `kome_prerush_admins` テーブルで行います。</li>
-          </ul>
+          <p class="small" id="authUser" style="margin-top:14px">Discord認証前です。</p>
         </aside>
       </div>
     </section>
@@ -196,6 +199,7 @@
               <h2>参加登録一覧</h2>
             </div>
           </div>
+          <p class="small" id="reviewerIdentity" style="margin:0 0 14px">Discord認証とレビュー解錠が終わると、ここに現在の操作アカウントが表示されます。</p>
           <div class="table">
             <table>
               <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th>タイトル</th><th>名義</th><th>URL</th><th>補足</th><th>操作</th></tr></thead>
@@ -207,15 +211,8 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./admin.js"></script>
+  <script src="./admin.js?v=2"></script>
 </body>
 </html>
-
-
-
-
-
-

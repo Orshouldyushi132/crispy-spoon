@@ -1,63 +1,62 @@
-# 米プレラ 完成版セット
+# 米プレラ サイト構成
 
-このワークスペースでは、一般公開ページが `index (3).html`、公開側ロジックが `public.js`、管理ページが `admin.html`、管理側ロジックが `admin.js` です。
+このリポジトリは、公開ページ `index.html` と管理ページ `admin.html` を中心にした静的サイトです。  
+公開ページは Supabase の公開データか `localStorage` を使って動き、管理ページは Cloudflare Pages Functions 経由で Discord 認証と審査操作を行います。
+
+## ファイル
+
+- `index.html`: 一般公開ページ
+- `public.js`: 公開ページの表示、参加登録、検索、気になる保存
+- `admin.html`: 管理ページ UI
+- `admin.js`: 管理ページの Discord 認証フローと審査 UI
+- `functions/api/admin/*`: Cloudflare Pages Functions の管理 API
+- `functions/_lib/*`: セッション管理と Supabase REST 共通処理
+- `pickers.css` / `pickers.js`: カスタムピッカー UI
+- `motion.css` / `motion.js`: 背景やスクロール演出
 
 ## できること
 
 ### 公開ページ
-- 参加者が曲を仮予約できる
-- 承認済みの参加者予約を公開予定タイムラインに表示できる
-- 「全てお米の所為です。」の公式動画予定を同じタイムラインに混ぜて表示できる
-- 参加者予約と公式予定のうち、いちばん近い次回投稿までの残り時間を表示できる
-- イベント日が設定されていれば「次は○○の、○○です。」を表示できる
-- 初見向けの説明、用語集、ルール要約、通知導線を表示できる
-- 気になる保存、カレンダー保存、検索、スマホ下部導線を使える
-- ハッシュタグや再生リストURLがあれば公開ページに反映できる
-- 共有環境では、未掲載の登録を一般公開しない
+- 参加者が曲を仮登録できる
+- 承認済みの参加動画をタイムテーブルに表示できる
+- 「全てお米の所為です。」の公式予定を同じタイムテーブルに混ぜて表示できる
+- 開催情報、初見向け説明、用語集、ルール、通知導線を表示できる
+- 検索、レーン絞り込み、時間帯絞り込み、気になる保存、`.ics` 保存が使える
+- Supabase 未設定時は `localStorage` だけで見た目確認ができる
 
 ### 管理ページ
-- 参加者の仮予約を承認 / 却下 / 削除できる
-- イベント日を設定できる
-- 公式チャンネル名 / URL を設定できる
-- ハッシュタグ、X の検索URL、再生リストURL、登録締切分数を設定できる
-- 「全てお米の所為です。」の動画予定を追加 / 削除できる
-- Supabase Auth のメール+パスワード / マジックリンクでログインできる
-- 管理者メールに登録されたアカウントだけ編集UIが開く
+- Discord 認証のあとにレビュー用パスワードを入力して審査モードを開ける
+- 承認、差し戻し、削除、公式予定の追加削除、イベント設定変更ができる
+- 承認一覧の近くで、いまどの Discord アカウントでログインしているか確認できる
+- 管理操作は Cloudflare Functions から Supabase REST API に対して実行する
 
-## ローカル保存
+## ローカル確認
 
-そのまま開くと `localStorage` 保存です。  
-公開ページはそのまま確認できます。  
-管理ページは安全側に倒してあり、`admin.js` の `ALLOW_LOCAL_ADMIN_FALLBACK` を `true` にしない限りローカル編集UIは開きません。
+### 公開ページだけ確認したいとき
 
-使っているキーは次の 3 つです。
+`public.js` 先頭の `SUPABASE_URL` と `SUPABASE_ANON_KEY` が空なら、公開ページは `localStorage` モードで動きます。  
+このとき使うキーは次のとおりです。
 
 - `kome_prerush_entries_local_v3`
 - `kome_prerush_official_v1`
 - `kome_prerush_settings_v1`
+- `kome_prerush_viewer_favorites_v1`
 
-## Supabase で共有するには
+### 管理ページも確認したいとき
 
-`public.js` と `admin.js` の先頭にある次を埋めます。
+`admin.html` は `/api/admin/*` の Cloudflare Functions を前提にしています。  
+HTML ファイルを単独で開くだけでは Discord 認証も審査操作も動きません。Cloudflare Pages か `wrangler pages dev` など、Functions が同じオリジンで動く環境で確認してください。
+
+## 公開データを Supabase で共有する
+
+`public.js` の先頭にある次の値を設定します。
 
 ```js
-const SUPABASE_URL = "ここにProject URL";
-const SUPABASE_ANON_KEY = "ここにanon key";
+const SUPABASE_URL = "ここに Project URL";
+const SUPABASE_ANON_KEY = "ここに anon key";
 ```
 
-### Auth の前準備
-
-1. Supabase Auth で管理者用ユーザーを作成します。
-2. `Authentication -> URL Configuration` に管理ページの URL を追加します。
-   例: `https://your-domain.example/admin.html`
-3. マジックリンクを使う場合も、同じ URL を Redirect URL に含めます。
-
-`admin.js` では、パスワードログインとマジックリンクの両方に対応しています。  
-マジックリンク送信時は `shouldCreateUser: false` にしているので、事前に存在するユーザーにしか送れません。
-
 ### 作成するテーブル
-
-以下は、そのまま使いやすいようにチェック制約を足した例です。
 
 ```sql
 create table public.kome_prerush_entries (
@@ -93,52 +92,20 @@ create table public.kome_prerush_settings (
   entry_close_minutes integer not null default 15 check (entry_close_minutes between 5 and 120),
   updated_at timestamptz not null default now()
 );
-
-create table public.kome_prerush_admins (
-  email text primary key check (email = lower(email)),
-  created_at timestamptz not null default now()
-);
 ```
 
-### RLS
+### 公開ページ向けの RLS
 
 ```sql
 alter table public.kome_prerush_entries enable row level security;
 alter table public.kome_prerush_official_videos enable row level security;
 alter table public.kome_prerush_settings enable row level security;
-alter table public.kome_prerush_admins enable row level security;
-
-create or replace function public.is_kome_prerush_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.kome_prerush_admins
-    where email = lower(coalesce(auth.jwt() ->> 'email', ''))
-  );
-$$;
-
-create policy "admins can read own admin row"
-on public.kome_prerush_admins
-for select
-to authenticated
-using (email = lower(coalesce(auth.jwt() ->> 'email', '')));
 
 create policy "public can read approved entries"
 on public.kome_prerush_entries
 for select
 to anon, authenticated
 using (status = 'approved');
-
-create policy "admins can read all entries"
-on public.kome_prerush_entries
-for select
-to authenticated
-using (public.is_kome_prerush_admin());
 
 create policy "public can submit pending entries"
 on public.kome_prerush_entries
@@ -150,68 +117,23 @@ with check (
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
 );
 
-create policy "admins can update entries"
-on public.kome_prerush_entries
-for update
-to authenticated
-using (public.is_kome_prerush_admin())
-with check (public.is_kome_prerush_admin());
-
-create policy "admins can delete entries"
-on public.kome_prerush_entries
-for delete
-to authenticated
-using (public.is_kome_prerush_admin());
-
 create policy "public can read official videos"
 on public.kome_prerush_official_videos
 for select
 to anon, authenticated
 using (true);
 
-create policy "admins can insert official videos"
-on public.kome_prerush_official_videos
-for insert
-to authenticated
-with check (public.is_kome_prerush_admin());
-
-create policy "admins can update official videos"
-on public.kome_prerush_official_videos
-for update
-to authenticated
-using (public.is_kome_prerush_admin())
-with check (public.is_kome_prerush_admin());
-
-create policy "admins can delete official videos"
-on public.kome_prerush_official_videos
-for delete
-to authenticated
-using (public.is_kome_prerush_admin());
-
 create policy "public can read settings"
 on public.kome_prerush_settings
 for select
 to anon, authenticated
 using (true);
-
-create policy "admins can insert settings"
-on public.kome_prerush_settings
-for insert
-to authenticated
-with check (public.is_kome_prerush_admin());
-
-create policy "admins can update settings"
-on public.kome_prerush_settings
-for update
-to authenticated
-using (public.is_kome_prerush_admin())
-with check (public.is_kome_prerush_admin());
 ```
 
 重要:
-- `anon` に `update / delete / insert official / update settings` を開けないでください。
-- 公開ページは承認済みの `entries` だけ読む前提です。
-- 未掲載登録を公開したい場合でも、別の公開専用ビューを作る方が安全です。
+- `anon` に `update` や `delete` を開けないでください。
+- 公開ページは承認済み `entries` だけ読む前提です。
+- 管理操作は後述の Cloudflare Functions + service role に寄せます。
 
 ### 初期設定の例
 
@@ -248,21 +170,48 @@ set event_date = excluded.event_date,
     entry_close_minutes = excluded.entry_close_minutes;
 ```
 
-### 管理者メールの登録
+## 管理ページを Cloudflare + Discord 認証で動かす
 
-```sql
-insert into public.kome_prerush_admins (email)
-values ('admin@example.com')
-on conflict (email) do nothing;
+管理ページは `functions/api/admin/*` を通して動きます。  
+ブラウザから直接 Supabase の管理権限を持たせず、Cloudflare Functions 側で Discord 認証済みセッションとレビュー用パスワードを確認してから、Supabase REST API に service role で接続します。
+
+### Cloudflare に設定する環境変数
+
+- `ADMIN_SESSION_SECRET`: セッション Cookie 署名用の十分長いランダム文字列
+- `DISCORD_CLIENT_ID`: Discord アプリの Client ID
+- `DISCORD_CLIENT_SECRET`: Discord アプリの Client Secret
+- `DISCORD_REDIRECT_URI`: 任意。未設定なら `https://<your-domain>/api/admin/discord/callback`
+- `SUPABASE_URL`: Supabase Project URL
+- `SUPABASE_SERVICE_ROLE_KEY`: 管理 API 用の service role key
+- `ADMIN_REVIEW_PASSWORD`: 審査モード解錠用パスワード
+
+注意:
+- `SUPABASE_SERVICE_ROLE_KEY` は絶対にブラウザに出さないでください。
+- `ADMIN_REVIEW_PASSWORD` はコードの既定値に頼らず、必ず Cloudflare 側の環境変数で上書きしてください。
+
+### Discord Developer Portal 側で必要な設定
+
+Discord アプリの OAuth2 Redirects に、管理ページのコールバック URL を登録します。
+
+例:
+
+```text
+https://your-domain.example/api/admin/discord/callback
 ```
+
+この構成では `identify` スコープを使って、ログイン中の Discord ユーザー情報を取得します。
+
+### 管理ページの流れ
+
+1. `Discordで認証` ボタンで Discord OAuth を開始する
+2. 認証後にレビュー用パスワード欄が有効になる
+3. 正しいパスワードを入力すると審査モードが開く
+4. 承認一覧の上に、現在操作中の Discord アカウントが表示される
+5. その状態で承認、差し戻し、削除、公式予定編集、イベント設定保存ができる
 
 ## 注意
 
-本番では次をセットで入れるのが前提です。
-
-- `admin.js` に Supabase Project URL / anon key を設定する
-- Supabase Auth に管理ユーザーを作る
-- `kome_prerush_admins` に許可メールを登録する
-- 上の RLS をそのまま適用する
-
-この構成なら、普通の静的HTMLでも「公開ページは anon で安全に読める」「管理ページはログイン済み管理者だけ編集できる」に分けられます。
+- `public.js` の `SUPABASE_URL` / `SUPABASE_ANON_KEY` は公開用です。
+- `admin.js` に秘密鍵は入れません。管理操作は必ず `functions/` 経由で行います。
+- `admin.html` は Cloudflare Functions と同じオリジンに置いてください。
+- Discord 認証とレビュー解錠が済むまでは、管理 UI は開かない設計です。
