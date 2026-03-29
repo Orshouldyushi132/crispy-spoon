@@ -1,0 +1,8 @@
+﻿.git/
+.gitignore
+functions/
+worker/
+README.md
+AGENTS.md
+wrangler.toml
+.assetsignore

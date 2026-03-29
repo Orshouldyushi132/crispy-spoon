@@ -1,7 +1,7 @@
 # 米プレラ サイト構成
 
 このリポジトリは、公開ページ `index.html` と管理ページ `admin.html` を中心にした静的サイトです。  
-公開ページは Supabase の公開データか `localStorage` を使って動き、管理ページは Cloudflare Pages Functions 経由で Discord 認証と審査操作を行います。
+公開ページは Supabase の公開データか `localStorage` を使って動き、管理ページは Cloudflare Workers / Pages Functions 経由で Discord 認証と審査操作を行います。
 
 ## ファイル
 
@@ -9,8 +9,11 @@
 - `public.js`: 公開ページの表示、参加登録、検索、気になる保存
 - `admin.html`: 管理ページ UI
 - `admin.js`: 管理ページの Discord 認証フローと審査 UI
-- `functions/api/admin/*`: Cloudflare Pages Functions の管理 API
+- `functions/api/admin/*`: Pages Functions と Worker ルーターから呼び出す管理 API
 - `functions/_lib/*`: セッション管理と Supabase REST 共通処理
+- `worker/index.js`: `workers.dev` 用の API ルーター
+- `wrangler.toml`: Workers デプロイ設定
+- `.assetsignore`: Workers 配信から外すファイル一覧
 - `pickers.css` / `pickers.js`: カスタムピッカー UI
 - `motion.css` / `motion.js`: 背景やスクロール演出
 
@@ -45,7 +48,7 @@
 ### 管理ページも確認したいとき
 
 `admin.html` は `/api/admin/*` の Cloudflare Functions を前提にしています。  
-HTML ファイルを単独で開くだけでは Discord 認証も審査操作も動きません。Cloudflare Pages か `wrangler pages dev` など、Functions が同じオリジンで動く環境で確認してください。
+HTML ファイルを単独で開くだけでは Discord 認証も審査操作も動きません。Cloudflare Pages か `wrangler dev` / `wrangler pages dev` など、API が同じオリジンで動く環境で確認してください。
 
 ## 公開データを Supabase で共有する
 
@@ -173,6 +176,7 @@ set event_date = excluded.event_date,
 ## 管理ページを Cloudflare + Discord 認証で動かす
 
 管理ページは `functions/api/admin/*` を通して動きます。  
+このリポジトリには `worker/index.js` と `wrangler.toml` も含めてあり、`workers.dev` へ出す場合でも `/api/admin/*` が 404 にならないようにしてあります。
 ブラウザから直接 Supabase の管理権限を持たせず、Cloudflare Functions 側で Discord 認証済みセッションとレビュー用パスワードを確認してから、Supabase REST API に service role で接続します。
 
 ### Cloudflare に設定する環境変数
@@ -213,5 +217,5 @@ https://your-domain.example/api/admin/discord/callback
 
 - `public.js` の `SUPABASE_URL` / `SUPABASE_ANON_KEY` は公開用です。
 - `admin.js` に秘密鍵は入れません。管理操作は必ず `functions/` 経由で行います。
-- `admin.html` は Cloudflare Functions と同じオリジンに置いてください。
+- `admin.html` は Cloudflare Functions / Worker API と同じオリジンに置いてください。
 - Discord 認証とレビュー解錠が済むまでは、管理 UI は開かない設計です。
