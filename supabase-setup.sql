@@ -1,0 +1,101 @@
+﻿create table if not exists public.kome_prerush_entries (
+  id text primary key,
+  artist text not null check (char_length(artist) between 1 and 80),
+  title text not null check (char_length(title) between 1 and 120),
+  parent_slot integer not null check (parent_slot between 1 and 5),
+  start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
+  url text not null check (url ~ '^https?://'),
+  note text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.kome_prerush_official_videos (
+  id text primary key,
+  title text not null check (char_length(title) between 1 and 120),
+  start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
+  url text,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.kome_prerush_settings (
+  id text primary key,
+  event_date text check (event_date is null or event_date ~ '^\d{4}-\d{2}-\d{2}$'),
+  official_name text not null,
+  official_url text not null check (official_url ~ '^https?://'),
+  event_hashtag text,
+  x_search_url text,
+  live_playlist_url text,
+  archive_playlist_url text,
+  entry_close_minutes integer not null default 15 check (entry_close_minutes between 5 and 120),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.kome_prerush_entries enable row level security;
+alter table public.kome_prerush_official_videos enable row level security;
+alter table public.kome_prerush_settings enable row level security;
+
+drop policy if exists "public can read approved entries" on public.kome_prerush_entries;
+create policy "public can read approved entries"
+on public.kome_prerush_entries
+for select
+to anon, authenticated
+using (status = 'approved');
+
+drop policy if exists "public can submit pending entries" on public.kome_prerush_entries;
+create policy "public can submit pending entries"
+on public.kome_prerush_entries
+for insert
+to anon, authenticated
+with check (
+  status = 'pending'
+  and parent_slot between 1 and 5
+  and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
+);
+
+drop policy if exists "public can read official videos" on public.kome_prerush_official_videos;
+create policy "public can read official videos"
+on public.kome_prerush_official_videos
+for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "public can read settings" on public.kome_prerush_settings;
+create policy "public can read settings"
+on public.kome_prerush_settings
+for select
+to anon, authenticated
+using (true);
+
+insert into public.kome_prerush_settings (
+  id,
+  event_date,
+  official_name,
+  official_url,
+  event_hashtag,
+  x_search_url,
+  live_playlist_url,
+  archive_playlist_url,
+  entry_close_minutes
+) values (
+  'default',
+  '2026-08-18',
+  '全てお米の所為です。',
+  'https://www.youtube.com/@or_should_rice',
+  '#米プレラ',
+  '',
+  '',
+  '',
+  15
+)
+on conflict (id) do update
+set event_date = excluded.event_date,
+    official_name = excluded.official_name,
+    official_url = excluded.official_url,
+    event_hashtag = excluded.event_hashtag,
+    x_search_url = excluded.x_search_url,
+    live_playlist_url = excluded.live_playlist_url,
+    archive_playlist_url = excluded.archive_playlist_url,
+    entry_close_minutes = excluded.entry_close_minutes,
+    updated_at = now();

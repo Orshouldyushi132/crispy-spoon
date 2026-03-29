@@ -59,6 +59,9 @@ const SUPABASE_URL = "ここに Project URL";
 const SUPABASE_ANON_KEY = "ここに anon key";
 ```
 
+
+SQL をそのまま流したい場合は、リポジトリ直下の supabase-setup.sql も使えます。
+
 ### 作成するテーブル
 
 ```sql
