@@ -259,11 +259,6 @@ function consumeQueryNotice() {
 }
 
 els.discordConnect.addEventListener("click", () => {
-  if (!sessionInfo.discordConfigured) {
-    const missing = formatMissingDiscordEnv(sessionInfo.missingDiscordEnv);
-    setMsg(els.authStatus, `Discord認証はまだ有効になっていません。Cloudflare に ${missing} を設定してから「状態を再確認」を押してください。`, "err");
-    return;
-  }
   window.location.href = `${API_BASE}/discord/start`;
 });
 

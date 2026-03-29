@@ -1,11 +1,14 @@
-﻿import { errorResponse, isDiscordConfigured } from "../../../_lib/admin-backend.js";
+import { getDiscordConfigState } from "../../../_lib/admin-backend.js";
 import { createOauthState, writeOauthState } from "../../../_lib/session.js";
 
 export const onRequestGet = async (context) => {
-  if (!isDiscordConfigured(context.env)) {
-    return errorResponse("Discord認証の環境変数が未設定です。", 500);
-  }
   const requestUrl = new URL(context.request.url);
+  const redirectBase = `${requestUrl.origin}/admin.html`;
+  const discordConfig = getDiscordConfigState(context.env);
+  if (!discordConfig.configured) {
+    const missing = discordConfig.missing.join(" / ") || "ADMIN_SESSION_SECRET / DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET";
+    return Response.redirect(`${redirectBase}?discord_error=${encodeURIComponent(`Discord認証の設定がまだ足りません: ${missing}`)}`, 302);
+  }
   const redirectUri = context.env.DISCORD_REDIRECT_URI || `${requestUrl.origin}/api/admin/discord/callback`;
   const state = createOauthState();
   const authorizeUrl = new URL("https://discord.com/oauth2/authorize");
