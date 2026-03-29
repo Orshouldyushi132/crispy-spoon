@@ -14,3 +14,4 @@
 - Keep commit messages short and descriptive.
 - Preferred format: `feat: 機能を追加` / `fix: 不具合を修正` / `docs: 説明を更新`
 - Prefer finishing the implementation before creating the commit.
+- Do not place internal design notes, implementation memos, or meta-instructions in visible UI text.

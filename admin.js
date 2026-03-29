@@ -47,7 +47,7 @@ async function syncAuthState(force=false){
     return;
   }
   if(!shared){
-    toggleAuthControls(true);
+    toggleAuthControls(false);
     els.signOut.hidden=true;
     els.app.hidden=true;
     currentUser=null;
@@ -138,4 +138,5 @@ els.offForm.addEventListener("submit",async e=>{e.preventDefault();if(!await req
 
 if(shared)sb.auth.onAuthStateChange(()=>{setTimeout(()=>{syncAuthState(true).catch(err=>setMsg(els.page,"認証更新に失敗しました: "+(err.message||err),"err"))},0)});
 syncAuthState(true).catch(err=>setMsg(els.page,"読み込みに失敗したよ: "+(err.message||err),"err"));
+
 
