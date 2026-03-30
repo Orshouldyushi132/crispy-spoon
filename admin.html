@@ -113,6 +113,13 @@
     .crew-current-item strong{display:block;margin-bottom:4px;font-size:.72rem;letter-spacing:.08em;color:var(--sub);text-transform:uppercase}
     .crew-current-item span{display:block;font-size:.98rem;font-weight:800;line-height:1.5;word-break:break-word}
     .crew-current-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .lane-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:10px;margin-top:6px}
+    .lane-check{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+    .lane-check:hover{border-color:rgba(140,215,255,.22);background:rgba(140,215,255,.08);transform:translateY(-1px)}
+    .lane-check input{width:18px;height:18px;margin:0;accent-color:var(--mint);flex:0 0 auto}
+    .lane-check span{display:block;font-size:.92rem;font-weight:800;line-height:1.45}
+    .lane-check.is-selected{border-color:rgba(99,230,207,.3);background:linear-gradient(145deg,rgba(99,230,207,.14),rgba(140,215,255,.08))}
+    .lane-check-help{margin-top:8px;color:var(--sub);font-size:.82rem;line-height:1.7}
     .badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
@@ -287,7 +294,9 @@
             <div class="row">
               <div>
                 <label for="crewAssignedLanes">担当枠</label>
-                <input id="crewAssignedLanes" name="crewAssignedLanes" maxlength="120" placeholder="例: DSC枠 / K²枠 / オリジナル枠" required>
+                <input id="crewAssignedLanes" name="crewAssignedLanes" type="hidden" required>
+                <div id="crewAssignedLanesList" class="lane-check-grid" role="group" aria-label="担当枠"></div>
+                <p class="lane-check-help">担当する枠を複数選択できます。</p>
               </div>
               <div>
                 <label for="crewSongCount">担当曲数</label>
@@ -426,6 +435,6 @@
     </div>
   </div>
 
-  <script src="./admin-gate.js?v=3"></script>
+  <script src="./admin-gate.js?v=4"></script>
 </body>
 </html>

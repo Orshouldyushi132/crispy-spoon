@@ -14,6 +14,9 @@ const SLOT_LABELS = {
   11: "K²枠",
   12: "オリジナル枠",
 };
+const SLOT_OPTIONS = Object.entries(SLOT_LABELS)
+  .sort((a, b) => Number(a[0]) - Number(b[0]))
+  .map(([value, label]) => ({ value: String(value), label }));
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -34,6 +37,7 @@ const els = {
   crewSubmitBtn: $("crewSubmitBtn"),
   crewCreditName: $("crewCreditName"),
   crewAssignedLanes: $("crewAssignedLanes"),
+  crewAssignedLanesList: $("crewAssignedLanesList"),
   crewSongCount: $("crewSongCount"),
   crewNote: $("crewNote"),
   crewViewerHint: $("crewViewerHint"),
@@ -185,9 +189,71 @@ function hasCrewAssignment(assignment = {}) {
   );
 }
 
+function laneTextFromValues(values = []) {
+  return values
+    .map((value) => slotLabel(value))
+    .filter((label) => label && label !== "未設定")
+    .join(" / ");
+}
+
+function getSelectedCrewLaneValues() {
+  return [...document.querySelectorAll("[data-crew-lane]")]
+    .filter((input) => input.checked)
+    .map((input) => String(input.value));
+}
+
+function syncCrewLaneSelectionUi() {
+  document.querySelectorAll("[data-crew-lane]").forEach((input) => {
+    input.closest(".lane-check")?.classList.toggle("is-selected", input.checked);
+  });
+  if (els.crewAssignedLanes) {
+    els.crewAssignedLanes.value = laneTextFromValues(getSelectedCrewLaneValues());
+  }
+}
+
+function parseAssignedLaneValues(text) {
+  const parts = String(text || "")
+    .split(/[\/／,\n、]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const selected = new Set();
+  SLOT_OPTIONS.forEach((option) => {
+    if (parts.includes(option.value) || parts.includes(option.label)) {
+      selected.add(option.value);
+    }
+  });
+  return [...selected];
+}
+
+function setCrewLaneSelection(values = []) {
+  const active = new Set(values.map((value) => String(value)));
+  document.querySelectorAll("[data-crew-lane]").forEach((input) => {
+    input.checked = active.has(String(input.value));
+  });
+  syncCrewLaneSelectionUi();
+}
+
+function buildCrewLaneChecks() {
+  if (!els.crewAssignedLanesList || els.crewAssignedLanesList.dataset.ready === "true") return;
+  els.crewAssignedLanesList.dataset.ready = "true";
+  els.crewAssignedLanesList.innerHTML = SLOT_OPTIONS.map((option) => `
+    <label class="lane-check">
+      <input type="checkbox" value="${esc(option.value)}" data-crew-lane>
+      <span>${esc(option.label)}</span>
+    </label>
+  `).join("");
+  document.querySelectorAll("[data-crew-lane]").forEach((input) => {
+    input.addEventListener("change", () => {
+      syncCrewLaneSelectionUi();
+    });
+  });
+  syncCrewLaneSelectionUi();
+}
+
 function fillCrewForm(assignment = {}) {
+  buildCrewLaneChecks();
   els.crewCreditName.value = String(assignment.credit_name || "");
-  els.crewAssignedLanes.value = String(assignment.assigned_lanes || "");
+  setCrewLaneSelection(parseAssignedLaneValues(assignment.assigned_lanes || ""));
   els.crewSongCount.value = String(assignment.song_count || 1);
   els.crewNote.value = String(assignment.note || "");
   els.crewSubmitBtn.textContent = hasCrewAssignment(assignment) ? "担当情報を更新" : "担当情報を登録";
@@ -594,6 +660,11 @@ els.crewForm?.addEventListener("submit", async (event) => {
     setMsg(els.crewStatus, "先に Discord で認証してください。", "err");
     return;
   }
+  syncCrewLaneSelectionUi();
+  if (!String(els.crewAssignedLanes.value || "").trim()) {
+    setMsg(els.crewStatus, "担当枠を1つ以上選んでください。", "err");
+    return;
+  }
   const isEditing = hasCrewAssignment(ownCrewAssignment || {});
   const payload = {
     credit_name: String(els.crewCreditName.value || "").trim(),
@@ -690,4 +761,5 @@ els.offForm.addEventListener("submit", async (event) => {
 });
 
 consumeQueryNotice();
+buildCrewLaneChecks();
 syncSession(true).catch((error) => setMsg(els.page, `読み込みに失敗しました: ${error.message || error}`, "err"));
