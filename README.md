@@ -77,7 +77,7 @@ create table public.kome_prerush_entries (
   start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
   url text not null check (url ~ '^https?://'),
   note text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'deleted')),
   review_note text not null default '',
   reviewed_at timestamptz,
   applicant_key text,
@@ -107,9 +107,9 @@ create table public.kome_prerush_settings (
 );
 ```
 
-既存の Supabase プロジェクトを使っている場合も、この `supabase-setup.sql` をもう一度実行してください。`review_note` / `reviewed_at` / `applicant_key` 列が追加され、差し戻し理由の通知と本人向け状態確認に使われます。
+既存の Supabase プロジェクトを使っている場合も、この `supabase-setup.sql` をもう一度実行してください。`review_note` / `reviewed_at` / `applicant_key` 列に加えて、申請削除通知に使う `deleted` 状態も反映されます。
 
-`supabase-setup.sql` 全体ではなく差分だけを当てたいときは、`supabase-migrate-review-notice.sql` を実行すると必要な列追加とポリシー更新だけ反映できます。
+`supabase-setup.sql` 全体ではなく差分だけを当てたいときは、`supabase-migrate-review-notice.sql` で列追加、`supabase-migrate-deleted-status.sql` で削除通知用の状態追加を反映できます。
 
 ### 公開ページ向けの RLS
 

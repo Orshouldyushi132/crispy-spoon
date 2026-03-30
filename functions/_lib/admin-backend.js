@@ -8,6 +8,7 @@ const TABLES = {
 
 const ENTRY_SELECT_BASE = "id,artist,title,parent_slot,start_time,url,note,status,created_at";
 const ENTRY_SELECT_WITH_REVIEW = `${ENTRY_SELECT_BASE},review_note,reviewed_at`;
+const DELETED_ENTRY_NOTE = "あなたの動画申請は削除されました。";
 
 const DEFAULT_SETTINGS = {
   id: "default",
@@ -185,6 +186,17 @@ function isMissingEntryColumnError(error, column) {
     && message.includes("column")
     && message.includes(TABLES.entries.toLowerCase())
     && message.includes(String(column || "").toLowerCase())
+  );
+}
+
+function isDeletedStatusConstraintError(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return (
+    error instanceof HttpError
+    && (
+      (message.includes("check constraint") && message.includes("status"))
+      || message.includes("kome_prerush_entries_status_check")
+    )
   );
 }
 
@@ -535,9 +547,23 @@ export async function mutateEntry(env, body) {
   const id = String(body.id || "").trim();
   if (!id) throw new HttpError(400, "対象の参加登録が見つかりません。");
   if (action === "delete") {
-    await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
+    try {
+      await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          status: "deleted",
+          review_note: DELETED_ENTRY_NOTE,
+          reviewed_at: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
+      if (reviewColumnsMissing || isDeletedStatusConstraintError(error)) {
+        throw new HttpError(409, "削除通知を申請者側に表示するには、Supabase で deleted 状態の追加が必要です。supabase-migrate-deleted-status.sql を実行してください。");
+      }
+      throw error;
+    }
     return { ok: true };
   }
   if (action === "status") {

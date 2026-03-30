@@ -257,6 +257,7 @@ const setPlannerStatus = (message) => {
 const badge = (status) => {
   if (status === "approved") return '<span class="badge approved">掲載中</span>';
   if (status === "rejected") return '<span class="badge rejected">差し戻し</span>';
+  if (status === "deleted") return '<span class="badge rejected">削除済み</span>';
   return '<span class="badge pending">審査待ち</span>';
 };
 
@@ -805,7 +806,9 @@ function drawPending(entries, trackedEntries = []) {
     .sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time))
     .map((item) => {
       const reviewNote = String(item.review_note || "").trim();
-      const reviewLabel = reviewNote || (item.status === "rejected" ? "差し戻し理由は管理側で設定されます。" : "");
+      const reviewLabel = reviewNote
+        || (item.status === "rejected" ? "差し戻し理由は管理側で設定されます。" : "")
+        || (item.status === "deleted" ? "あなたの動画申請は削除されました。" : "");
       const isRejected = String(item.status || "") === "rejected";
       const detailParts = [];
       if (String(item.note || "").trim()) {
@@ -826,12 +829,14 @@ function drawPending(entries, trackedEntries = []) {
     }).join("");
 
   const tracked = trackedEntries.filter((item) => item && item.id);
-  const latestRejected = [...tracked]
-    .filter((item) => item.status === "rejected")
+  const latestReviewUpdate = [...tracked]
+    .filter((item) => item.status === "rejected" || item.status === "deleted")
     .sort((a, b) => new Date(b.reviewed_at || b.created_at || 0) - new Date(a.reviewed_at || a.created_at || 0))[0] || null;
 
-  if (latestRejected) {
-    els.entryReviewNotice.textContent = `差し戻しがありました。理由: ${String(latestRejected.review_note || "内容を確認して再申請してください。").trim()}`;
+  if (latestReviewUpdate?.status === "deleted") {
+    els.entryReviewNotice.textContent = String(latestReviewUpdate.review_note || "あなたの動画申請は削除されました。").trim();
+  } else if (latestReviewUpdate?.status === "rejected") {
+    els.entryReviewNotice.textContent = `差し戻しがありました。理由: ${String(latestReviewUpdate.review_note || "内容を確認して再申請してください。").trim()}`;
   } else if (tracked.length) {
     els.entryReviewNotice.textContent = "この端末から送った参加登録の状態を表示しています。差し戻しがあった場合はここに理由も表示されます。";
   } else {

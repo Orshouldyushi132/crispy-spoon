@@ -75,6 +75,7 @@ function formatDate(value) {
 function statusBadge(status) {
   if (status === "approved") return '<span class="badge approved">掲載中</span>';
   if (status === "rejected") return '<span class="badge rejected">差し戻し</span>';
+  if (status === "deleted") return '<span class="badge rejected">削除済み</span>';
   return '<span class="badge pending">審査待ち</span>';
 }
 
@@ -166,7 +167,9 @@ function drawOfficial(list) {
 }
 
 function drawEntries(list) {
-  const items = [...list].sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
+  const items = [...list]
+    .filter((item) => String(item.status || "") !== "deleted")
+    .sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
   els.admin.innerHTML = items.length
     ? items.map((item) => {
       const detailParts = [];

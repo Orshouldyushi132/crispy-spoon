@@ -6,7 +6,7 @@ create table if not exists public.kome_prerush_entries (
   start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
   url text not null check (url ~ '^https?://'),
   note text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'deleted')),
   review_note text not null default '',
   reviewed_at timestamptz,
   applicant_key text,
@@ -38,6 +38,25 @@ create table if not exists public.kome_prerush_settings (
 alter table public.kome_prerush_entries add column if not exists review_note text not null default '';
 alter table public.kome_prerush_entries add column if not exists reviewed_at timestamptz;
 alter table public.kome_prerush_entries add column if not exists applicant_key text;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.kome_prerush_entries'::regclass
+      and conname = 'kome_prerush_entries_status_check'
+  ) then
+    alter table public.kome_prerush_entries
+      drop constraint kome_prerush_entries_status_check;
+  end if;
+
+  alter table public.kome_prerush_entries
+    add constraint kome_prerush_entries_status_check
+    check (status in ('pending', 'approved', 'rejected', 'deleted'));
+exception
+  when duplicate_object then null;
+end $$;
 
 create index if not exists kome_prerush_entries_applicant_key_idx
   on public.kome_prerush_entries (applicant_key, created_at desc);
