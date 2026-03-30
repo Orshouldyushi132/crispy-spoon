@@ -118,11 +118,38 @@ function drawSummary(entries, official, settings) {
   els.sumOfficial.textContent = String(official.length);
 }
 
+function bindCardToggles(scope) {
+  scope.querySelectorAll("[data-card-toggle]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const card = event.currentTarget.closest(".stack-card");
+      const details = card?.querySelector(".stack-card-details");
+      if (!card || !details) return;
+      const expanded = event.currentTarget.getAttribute("aria-expanded") === "true";
+      details.hidden = expanded;
+      card.classList.toggle("is-expanded", !expanded);
+      event.currentTarget.setAttribute("aria-expanded", String(!expanded));
+      const label = event.currentTarget.querySelector(".stack-card-toggle");
+      if (label) label.textContent = expanded ? "詳細を開く" : "詳細を閉じる";
+    });
+  });
+}
+
 function drawOfficial(list) {
   const items = [...list].sort((a, b) => mins(a.start_time) - mins(b.start_time));
   els.official.innerHTML = items.length
-    ? items.map((item) => `<tr><td class="t time-cell" data-label="時間">${esc(item.start_time)}</td><td class="title-cell" data-label="タイトル"><span class="song">${esc(item.title)}</span></td><td class="url-cell" data-label="URL">${safeUrl(item.url, true) ? `<a class="url" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">${esc(safeUrl(item.url, true))}</a>` : '<span class="small">URL未設定</span>'}</td><td class="note-cell" data-label="補足">${esc(item.note) || "—"}</td><td class="action-cell" data-label="操作"><div class="table-actions"><button class="delete" data-odel="${esc(item.id)}">削除</button></div></td></tr>`).join("")
+    ? items.map((item) => {
+      const detailParts = [];
+      if (String(item.note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">補足</p><p class="stack-detail-value">${esc(item.note)}</p></div>`);
+      }
+      detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="delete" data-odel="${esc(item.id)}">削除</button></div></div>`);
+      const urlButton = safeUrl(item.url, true)
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        : '<span class="small">URL未設定</span>';
+      return `<tr class="stack-card-row"><td colspan="5"><article class="stack-card"><div class="stack-card-top"><span class="stack-chip">公式予定</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta">${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
+    }).join("")
     : '<tr><td colspan="5" class="empty">まだ公式予定はありません。</td></tr>';
+  bindCardToggles(els.official);
   document.querySelectorAll("[data-odel]").forEach((button) => {
     button.addEventListener("click", async (event) => {
       if (!sessionState?.reviewUnlocked) return;
@@ -141,8 +168,22 @@ function drawOfficial(list) {
 function drawEntries(list) {
   const items = [...list].sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
   els.admin.innerHTML = items.length
-    ? items.map((item) => `<tr><td data-label="状態">${statusBadge(item.status)}</td><td class="t lane-cell" data-label="レーン">レーン${esc(item.parent_slot)}</td><td class="t time-cell" data-label="時間">${esc(item.start_time)}</td><td class="title-cell" data-label="タイトル"><span class="song">${esc(item.title)}</span></td><td class="artist-cell" data-label="名義">${esc(item.artist)}</td><td class="url-cell" data-label="URL">${safeUrl(item.url, true) ? `<a class="url" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">${esc(safeUrl(item.url, true))}</a>` : '<span class="small">URLなし</span>'}</td><td class="note-cell" data-label="補足">${esc(item.note) || "—"}</td><td class="review-cell" data-label="差し戻し理由">${esc(item.review_note || "") || "—"}</td><td class="action-cell" data-label="操作"><div class="table-actions"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button><button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button><button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></div></td></tr>`).join("")
+    ? items.map((item) => {
+      const detailParts = [];
+      if (String(item.note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">補足</p><p class="stack-detail-value">${esc(item.note)}</p></div>`);
+      }
+      if (String(item.review_note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">差し戻し理由</p><p class="stack-detail-value">${esc(item.review_note)}</p></div>`);
+      }
+      detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button><button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button><button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></div></div>`);
+      const urlButton = safeUrl(item.url, true)
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        : '<span class="small">URLなし</span>';
+      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card"><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
+    }).join("")
     : '<tr><td colspan="9" class="empty">まだ参加登録はありません。</td></tr>';
+  bindCardToggles(els.admin);
   document.querySelectorAll("[data-act]").forEach((button) => {
     button.addEventListener("click", async (event) => {
       if (!sessionState?.reviewUnlocked) return;

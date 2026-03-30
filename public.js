@@ -776,29 +776,46 @@ function startEditingEntry(id) {
   els.titleInput.focus({ preventScroll: true });
 }
 
+function bindCardToggles(scope) {
+  scope.querySelectorAll("[data-card-toggle]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const card = event.currentTarget.closest(".stack-card");
+      const details = card?.querySelector(".stack-card-details");
+      if (!card || !details) return;
+      const expanded = event.currentTarget.getAttribute("aria-expanded") === "true";
+      details.hidden = expanded;
+      card.classList.toggle("is-expanded", !expanded);
+      event.currentTarget.setAttribute("aria-expanded", String(!expanded));
+      const label = event.currentTarget.querySelector(".stack-card-toggle");
+      if (label) label.textContent = expanded ? "詳細を開く" : "詳細を閉じる";
+    });
+  });
+}
+
 function drawPending(entries, trackedEntries = []) {
   const renderRows = (items, showActions = false) => items
     .sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time))
     .map((item) => {
       const reviewNote = String(item.review_note || "").trim();
-      const reviewLabel = reviewNote || (item.status === "rejected" ? "差し戻し理由は管理側で設定されます。" : "—");
+      const reviewLabel = reviewNote || (item.status === "rejected" ? "差し戻し理由は管理側で設定されます。" : "");
       const isRejected = String(item.status || "") === "rejected";
-      const actionHtml = showActions
-        ? (isRejected
-          ? `<button type="button" class="ghost table-edit-btn" data-edit-entry="${esc(item.id)}">修正して再申請</button>`
-          : `<span class="muted">${item.status === "pending" ? "確認待ち" : "掲載中"}</span>`)
-        : '<span class="muted">—</span>';
-      return `<tr>
-        <td data-label="状態">${badge(item.status || "approved")}</td>
-        <td class="t lane-cell" data-label="レーン">レーン${esc(item.parent_slot)}</td>
-        <td class="t time-cell" data-label="時間">${esc(item.start_time)}</td>
-        <td class="title-cell" data-label="タイトル"><span class="song">${esc(item.title)}</span></td>
-        <td class="artist-cell" data-label="名義">${esc(item.artist)}</td>
-        <td class="url-cell" data-label="URL">${safeUrl(item.url, true) ? `<a class="url" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">${esc(safeUrl(item.url, true))}</a>` : '<span class="muted">URLなし</span>'}</td>
-        <td class="note-cell" data-label="補足">${esc(item.note) || "—"}</td>
-        <td class="review-cell" data-label="審査メモ">${esc(reviewLabel)}</td>
-        <td class="action-cell" data-label="操作">${actionHtml}</td>
-      </tr>`;
+      const detailParts = [];
+      if (String(item.note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">補足</p><p class="stack-detail-value">${esc(item.note)}</p></div>`);
+      }
+      if (reviewLabel) {
+        detailParts.push(`<div><p class="stack-detail-label">審査メモ</p><p class="stack-detail-value">${esc(reviewLabel)}</p></div>`);
+      }
+      if (showActions && isRejected) {
+        detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button type="button" class="ghost table-edit-btn" data-edit-entry="${esc(item.id)}">修正して再申請</button></div></div>`);
+      }
+      const titleHtml = detailParts.length
+        ? `<button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button>`
+        : `<div class="stack-card-title is-static"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
+      const urlButton = safeUrl(item.url, true)
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        : '<span class="muted">URLなし</span>';
+      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card"><div class="stack-card-top">${badge(item.status || "approved")}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-chip">${esc(item.start_time)}</span></div>${titleHtml}<div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("");
 
   const tracked = trackedEntries.filter((item) => item && item.id);
@@ -828,6 +845,7 @@ function drawPending(entries, trackedEntries = []) {
       : '<tr><td colspan="9" class="empty">この端末から送った参加登録はまだありません。送信後はここで状態を確認できます。</td></tr>';
   }
 
+  bindCardToggles(els.pending);
   document.querySelectorAll("[data-edit-entry]").forEach((button) => {
     button.addEventListener("click", (event) => startEditingEntry(event.currentTarget.dataset.editEntry));
   });

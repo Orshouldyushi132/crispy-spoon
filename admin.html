@@ -57,6 +57,23 @@
     .stacked-table .table-actions{flex-direction:column;align-items:stretch}
     .stacked-table .table-actions button{width:100%}
     .stacked-table .empty{display:block;padding:18px 12px;border-radius:16px}
+    .stack-card-row{padding:0!important;border:none!important;background:none!important}
+    .stack-card-row td{padding:0!important}
+    .stack-card-row td:before{display:none!important}
+    .stack-card{padding:16px 18px;border-radius:20px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}
+    .stack-card.is-expanded{border-color:rgba(140,215,255,.28);box-shadow:0 0 0 1px rgba(140,215,255,.12) inset}
+    .stack-card-top,.stack-card-meta,.stack-card-action-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .stack-card-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;margin:10px 0 0;padding:0;border:none;background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+    .stack-card-title.is-static{cursor:default}
+    .stack-card-title-text{display:block;font-size:1.08rem;font-weight:900;line-height:1.32}
+    .stack-card-toggle{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(140,215,255,.16);background:rgba(140,215,255,.08);color:var(--cyan);font-size:.72rem;font-weight:900;white-space:nowrap}
+    .stack-card-meta{margin-top:10px}
+    .stack-chip,.stack-meta,.stack-card-link{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.86rem;font-weight:800}
+    .stack-meta{justify-content:flex-start;color:var(--text)}
+    .stack-card-link{text-decoration:none;color:var(--cyan)}
+    .stack-card-details{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+    .stack-detail-label{margin:0 0 4px;color:var(--sub);font-size:.74rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .stack-detail-value{margin:0;color:var(--text);line-height:1.7;word-break:break-word}
     .badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
@@ -249,6 +266,6 @@
 
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./admin.js?v=4"></script>
+  <script src="./admin.js?v=5"></script>
 </body>
 </html>
