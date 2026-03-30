@@ -47,6 +47,23 @@ function methodNotAllowed() {
   });
 }
 
+function withHtmlSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  const contentType = headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return response;
+  }
+  headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("X-Content-Type-Options", "nosniff");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request, env, executionCtx) {
     const url = new URL(request.url);
@@ -71,6 +88,7 @@ export default {
       return notFoundJson();
     }
 
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+    return withHtmlSecurityHeaders(assetResponse);
   },
 };

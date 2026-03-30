@@ -406,8 +406,8 @@ export async function createPublicEntry(env, request, body) {
   if (!title || title.length > 120) {
     throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
   }
-  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 5) {
-    throw new HttpError(400, "レーンは 1〜5 から選んでください。");
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 6) {
+    throw new HttpError(400, "枠は 1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 から選んでください。");
   }
   if (!okTime(startTime)) {
     throw new HttpError(400, "開始時刻の形式が正しくありません。");
@@ -424,7 +424,7 @@ export async function createPublicEntry(env, request, body) {
     `${TABLES.entries}?select=id&status=eq.approved&parent_slot=eq.${parentSlot}&start_time=eq.${encodeURIComponent(startTime)}&limit=1`,
   );
   if (Array.isArray(existing) && existing.length) {
-    throw new HttpError(409, "そのレーン・時間にはすでに掲載済みの動画があります。");
+    throw new HttpError(409, "その枠・時間にはすでに掲載済みの動画があります。");
   }
 
   const payload = {
@@ -496,8 +496,8 @@ export async function updatePublicEntry(env, request, body) {
   if (!title || title.length > 120) {
     throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
   }
-  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 5) {
-    throw new HttpError(400, "レーンは 1〜5 から選んでください。");
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 6) {
+    throw new HttpError(400, "枠は 1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 から選んでください。");
   }
   if (!okTime(startTime)) {
     throw new HttpError(400, "開始時刻の形式が正しくありません。");
@@ -544,7 +544,7 @@ export async function updatePublicEntry(env, request, body) {
     `${TABLES.entries}?select=id&status=eq.approved&parent_slot=eq.${parentSlot}&start_time=eq.${encodeURIComponent(startTime)}&id=not.eq.${encodeURIComponent(id)}&limit=1`,
   );
   if (Array.isArray(existing) && existing.length) {
-    throw new HttpError(409, "そのレーン・時間にはすでに掲載済みの動画があります。");
+    throw new HttpError(409, "その枠・時間にはすでに掲載済みの動画があります。");
   }
 
   const payload = {

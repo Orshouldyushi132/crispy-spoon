@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>米プレラ | 管理ページ</title>
   <link rel="stylesheet" href="./pickers.css?v=3">
@@ -249,7 +249,7 @@
             <div class="row">
               <div>
                 <label for="crewAssignedLanes">担当枠</label>
-                <input id="crewAssignedLanes" name="crewAssignedLanes" maxlength="120" placeholder="例: レーン2 / 20時台後半" required>
+                <input id="crewAssignedLanes" name="crewAssignedLanes" maxlength="120" placeholder="例: 2枠 / K²枠" required>
               </div>
               <div>
                 <label for="crewSongCount">担当曲数</label>
@@ -379,7 +379,7 @@
           <p class="small" id="reviewerIdentity" style="margin:0 0 14px">Discord認証とレビュー解錠が終わると、ここに現在の操作アカウントが表示されます。</p>
           <div class="table stacked-table">
             <table class="admin-table">
-              <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">差し戻し理由</th><th class="action-col">操作</th></tr></thead>
+              <thead><tr><th>状態</th><th>枠</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">差し戻し理由</th><th class="action-col">操作</th></tr></thead>
               <tbody id="adminBody"><tr><td colspan="9" class="empty">まだ参加登録はありません。</td></tr></tbody>
             </table>
           </div>
@@ -388,67 +388,6 @@
     </div>
   </div>
 
-  <script>
-    (() => {
-      const GATE_KEY = "kome_admin_gate_v1";
-      const GATE_PASSWORD = "SBCM818defolove";
-      const gate = document.getElementById("adminGate");
-      const shell = document.getElementById("adminShell");
-      const form = document.getElementById("adminGateForm");
-      const password = document.getElementById("adminGatePassword");
-      const status = document.getElementById("adminGateStatus");
-      const scripts = ["./pickers.js?v=3", "./motion.js?v=2", "./admin.js?v=11"];
-
-      const setStatus = (message, type = "") => {
-        status.textContent = message;
-        status.className = `status ${type}`.trim();
-      };
-
-      const loadScripts = async () => {
-        for (const src of scripts) {
-          await new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = () => reject(new Error(`${src} の読み込みに失敗しました。`));
-            document.body.appendChild(script);
-          });
-        }
-      };
-
-      const unlock = async () => {
-        sessionStorage.setItem(GATE_KEY, "ok");
-        gate.hidden = true;
-        shell.hidden = false;
-        try {
-          await loadScripts();
-        } catch (error) {
-          gate.hidden = false;
-          shell.hidden = true;
-          setStatus(error.message || String(error), "err");
-        }
-      };
-
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        if (String(password.value || "") !== GATE_PASSWORD) {
-          setStatus("パスワードが違います。", "err");
-          password.focus();
-          password.select();
-          return;
-        }
-        setStatus("");
-        await unlock();
-      });
-
-      if (sessionStorage.getItem(GATE_KEY) === "ok") {
-        unlock();
-      } else {
-        gate.hidden = false;
-        shell.hidden = true;
-        password.focus();
-      }
-    })();
-  </script>
+  <script src="./admin-gate.js?v=1"></script>
 </body>
 </html>

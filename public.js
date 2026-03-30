@@ -23,6 +23,15 @@ const DEFAULT_SETTINGS = {
   entry_close_minutes: 15,
 };
 
+const SLOT_LABELS = {
+  1: "1枠",
+  2: "2枠",
+  3: "3枠",
+  4: "4枠",
+  5: "K²枠",
+  6: "オリジナル枠",
+};
+
 const $ = (id) => document.getElementById(id);
 const els = {
   form: $("entryForm"),
@@ -243,6 +252,7 @@ const owner = (item) => (item.kind === "official" ? settings.official_name : Str
 const itemKey = (item) => `${item.kind}:${item.id}`;
 const isFavorite = (item) => favorites.has(itemKey(item));
 const saveFavorites = () => write(LF, [...favorites]);
+const slotLabel = (value) => SLOT_LABELS[Number(value)] || "未設定";
 
 const toggleFavorite = (item) => {
   const key = itemKey(item);
@@ -645,7 +655,7 @@ const matchesSearch = (item) => {
     item.note,
     item.start_time,
     item.kind === "official" ? "公式予定" : "参加動画",
-    item.parent_slot ? `レーン${item.parent_slot}` : "",
+    item.parent_slot ? slotLabel(item.parent_slot) : "",
   ].join(" ").toLowerCase();
   return haystack.includes(query);
 };
@@ -686,7 +696,7 @@ function drawTimeline(list) {
         <div>
           <div class="tags">
             <span class="tag ${item.kind === "official" ? "official" : "participant"}">${item.kind === "official" ? "公式予定" : "参加動画"}</span>
-            <span class="tag neutral">${item.kind === "official" ? "公式" : `レーン${esc(item.parent_slot)}`}</span>
+            <span class="tag neutral">${item.kind === "official" ? "公式" : esc(slotLabel(item.parent_slot))}</span>
             <span class="view-badge ${phase.klass}">${esc(phase.label)}</span>
             <span class="tag neutral">${esc(overlapText)}</span>
           </div>
@@ -825,7 +835,7 @@ function drawPending(entries, trackedEntries = []) {
         detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button type="button" class="ghost table-edit-btn" data-edit-entry="${esc(item.id)}">修正して再申請</button></div></div>`);
       }
       const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
-      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">レーン</span><span class="stack-summary-value">レーン${esc(item.parent_slot)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
+      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotLabel(item.parent_slot))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="muted">URLなし</span>';
@@ -881,7 +891,7 @@ function drawSearchSummary(list) {
   const parts = [];
   if (searchQuery) parts.push(`検索「${searchQuery}」`);
   if (filterState !== "all") parts.push(filterState === "participant" ? "参加動画" : filterState === "official" ? "公式予定" : "気になる");
-  if (laneFilter) parts.push(`レーン${laneFilter}`);
+  if (laneFilter) parts.push(slotLabel(laneFilter));
   if (timeFilter) parts.push(`${timeFilter}時台`);
   els.searchSummary.textContent = `${parts.length ? parts.join(" / ") : "すべて"} で ${shown.length} 件表示中`;
 }
@@ -961,7 +971,7 @@ function drawNext() {
     els.nextTime.textContent = "--";
     els.nextText.textContent = "参加動画を準備中";
     els.nextMeta1.textContent = "承認済みの参加作品がここに並びます";
-    els.nextMeta2.textContent = "開始時刻とレーンをここに表示します";
+    els.nextMeta2.textContent = "開始時刻と枠をここに表示します";
     els.nextKind.textContent = "承認待ちの参加動画があります";
     els.nextOverlap.textContent = "参加動画の公開時刻が近づくとここに残り時間を表示します。";
     els.nextState.textContent = "公開前";
@@ -997,7 +1007,7 @@ function drawNext() {
   els.nextTime.textContent = fmtDiff(upcoming.date.getTime() - Date.now());
   els.nextText.textContent = upcoming.title;
   els.nextMeta1.textContent = owner(upcoming);
-  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / レーン${upcoming.parent_slot}`;
+  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotLabel(upcoming.parent_slot)}`;
   els.nextKind.textContent = "承認済みの参加動画";
   els.nextState.textContent = phase.label;
   els.nextState.className = `view-badge ${phase.klass}`;
@@ -1073,7 +1083,7 @@ function updateEntryHelper() {
   els.entryDeadlineText.textContent = deadline.text;
 
   if (!lane || !okTime(time)) {
-    els.spacingAdviceText.textContent = "レーンと時刻を選ぶと、前後の枠との距離をここに表示します。";
+    els.spacingAdviceText.textContent = "枠と時刻を選ぶと、前後の予定との距離をここに表示します。";
     els.suggestTimesText.textContent = "おすすめの空き候補をここに表示します。";
     updatePromoTemplate();
     return;
@@ -1088,7 +1098,7 @@ function updateEntryHelper() {
   const nearby = schedule.filter((item) => Math.abs(mins(item.start_time) - targetMinute) <= 15);
 
   if (exact) {
-    els.spacingAdviceText.textContent = "同じレーン・同じ時刻に掲載中の動画があります。別時刻を選んでください。";
+    els.spacingAdviceText.textContent = "同じ枠・同じ時刻に掲載中の動画があります。別時刻を選んでください。";
   } else {
     const prevText = previous
       ? `直前は ${previous.start_time}（${Math.abs(targetMinute - mins(previous.start_time))}分差）`
@@ -1220,8 +1230,8 @@ els.form.addEventListener("submit", async (event) => {
     setStatus("必須項目を入力してね。", "err");
     return;
   }
-  if (!(parent >= 1 && parent <= 5)) {
-    setStatus("レーンは1〜5から選んでね。", "err");
+  if (!(parent >= 1 && parent <= 6)) {
+    setStatus("枠は 1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 から選んでね。", "err");
     return;
   }
   if (!okTime(time)) {
@@ -1239,7 +1249,7 @@ els.form.addEventListener("submit", async (event) => {
     && String(item.id || "") !== String(editing?.id || "")
   ));
   if (collision) {
-    setStatus("そのレーン・時間にはすでに掲載済みの動画があるよ。", "err");
+    setStatus("その枠・時間にはすでに掲載済みの動画があるよ。", "err");
     return;
   }
 

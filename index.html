@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>米プレラ | タイムテーブル</title>
   <link rel="stylesheet" href="./pickers.css?v=4">
@@ -325,7 +325,7 @@
         <p id="nextText">次回の参加動画を読み込み中</p>
         <div class="meta next-meta">
           <span id="nextMeta1">参加名義を確認しています</span>
-          <span id="nextMeta2">開始時刻とレーンをここに表示します</span>
+          <span id="nextMeta2">開始時刻と枠をここに表示します</span>
         </div>
         <div class="count-wrap">
           <p class="count-label">開始まで</p>
@@ -384,14 +384,15 @@
           <input id="scheduleSearch" type="search" placeholder="タイトル・名義・用語で検索">
         </label>
         <label class="selectbox" for="laneFilter" style="margin:0">
-          <div class="picker" data-picker="select" data-chip="LANE" data-compact="true">
+          <div class="picker" data-picker="select" data-chip="FRAME" data-compact="true">
             <select id="laneFilter">
-              <option value="">全レーン</option>
-              <option value="1">レーン1</option>
-              <option value="2">レーン2</option>
-              <option value="3">レーン3</option>
-              <option value="4">レーン4</option>
-              <option value="5">レーン5</option>
+              <option value="">全枠</option>
+              <option value="1">1枠</option>
+              <option value="2">2枠</option>
+              <option value="3">3枠</option>
+              <option value="4">4枠</option>
+              <option value="5">K²枠</option>
+              <option value="6">オリジナル枠</option>
             </select>
           </div>
         </label>
@@ -548,6 +549,10 @@
           <p class="small">公式予定は運営側の掲載、参加動画は応募作品、審査待ちはまだ一般タイムテーブルに出ていない確認中の状態です。</p>
         </div>
       </div>
+      <div class="guide">
+        <strong>枠の見方</strong>
+        <p class="small">このページでは界隈で使われる模倣元の系譜に合わせて、1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 で整理しています。</p>
+      </div>
     </section>
 
     <section class="card anchor-section" id="participants" style="margin-top:18px">
@@ -599,9 +604,16 @@
             <input id="title" name="title" maxlength="120" placeholder="例：全てお米の所為です。" required>
             <div class="row">
               <div>
-                <label for="parentSlot">レーン</label>
-                <div class="picker" data-picker="select" data-chip="LANE">
-                  <select id="parentSlot" name="parentSlot" required><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+                <label for="parentSlot">枠</label>
+                <div class="picker" data-picker="select" data-chip="FRAME">
+                  <select id="parentSlot" name="parentSlot" required>
+                    <option value="1">1枠</option>
+                    <option value="2">2枠</option>
+                    <option value="3">3枠</option>
+                    <option value="4">4枠</option>
+                    <option value="5">K²枠</option>
+                    <option value="6">オリジナル枠</option>
+                  </select>
                 </div>
               </div>
               <div>
@@ -633,7 +645,7 @@
           <p class="note" id="entryReviewNotice" style="margin-bottom:12px">この端末から送った参加登録の状態、または掲載済みの参加動画をここに表示します。ほかの未掲載申請は公開しません。</p>
           <div class="table stacked-table">
             <table class="schedule-table">
-              <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">審査メモ</th><th class="action-col">操作</th></tr></thead>
+              <thead><tr><th>状態</th><th>枠</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">審査メモ</th><th class="action-col">操作</th></tr></thead>
               <tbody id="pendingBody"><tr><td colspan="9" class="empty">まだ登録はありません。</td></tr></tbody>
             </table>
           </div>
@@ -652,8 +664,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=14"></script>
-  <script>
+  <script src="./public.js?v=15"></script>
+  <script type="application/json" id="legacyPublicScript" hidden>
     if(false){
     const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",LF="kome_prerush_viewer_favorites_v1";
     const DEF={event_date:"2026-08-18",official_name:"全てお米の所為です。",official_url:"https://www.youtube.com/@or_should_rice"};
