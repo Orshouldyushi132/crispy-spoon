@@ -215,6 +215,113 @@ function drawEntries(list) {
   });
 }
 
+function bindCardToggles(scope) {
+  scope.querySelectorAll("[data-card-toggle]").forEach((card) => {
+    const toggle = () => {
+      const details = card.querySelector(".stack-card-details");
+      if (!details) return;
+      const expanded = card.getAttribute("aria-expanded") === "true";
+      details.hidden = expanded;
+      card.classList.toggle("is-expanded", !expanded);
+      card.setAttribute("aria-expanded", String(!expanded));
+      const label = card.querySelector(".stack-card-hint");
+      if (label) label.textContent = expanded ? "クリックで詳細" : "クリックで閉じる";
+    };
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, button")) return;
+      toggle();
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      toggle();
+    });
+  });
+}
+
+function drawOfficial(list) {
+  const items = [...list].sort((a, b) => mins(a.start_time) - mins(b.start_time));
+  els.official.innerHTML = items.length
+    ? items.map((item) => {
+      const detailParts = [];
+      if (String(item.note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">補足</p><p class="stack-detail-value">${esc(item.note)}</p></div>`);
+      }
+      detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="delete" data-odel="${esc(item.id)}">削除</button></div></div>`);
+      const urlButton = safeUrl(item.url, true)
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        : '<span class="small">URL未設定</span>';
+      const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
+      return `<tr class="stack-card-row"><td colspan="5"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-top"><span class="stack-chip">公式予定</span><span class="stack-time">${esc(item.start_time)}</span>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div>${titleHtml}<div class="stack-card-meta">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+    }).join("")
+    : '<tr><td colspan="5" class="empty">まだ公式予定はありません。</td></tr>';
+  bindCardToggles(els.official);
+  document.querySelectorAll("[data-odel]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      if (!sessionState?.reviewUnlocked) return;
+      if (!confirm("この公式予定を削除しますか？")) return;
+      try {
+        await postJson("/official", { action: "delete", id: event.currentTarget.dataset.odel });
+        setMsg(els.offStatus, "公式予定を削除しました。", "ok");
+        await refresh(true);
+      } catch (error) {
+        setMsg(els.offStatus, `削除に失敗しました: ${error.message || error}`, "err");
+      }
+    });
+  });
+}
+
+function drawEntries(list) {
+  const items = [...list].sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
+  els.admin.innerHTML = items.length
+    ? items.map((item) => {
+      const detailParts = [];
+      if (String(item.note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">補足</p><p class="stack-detail-value">${esc(item.note)}</p></div>`);
+      }
+      if (String(item.review_note || "").trim()) {
+        detailParts.push(`<div><p class="stack-detail-label">差し戻し理由</p><p class="stack-detail-value">${esc(item.review_note)}</p></div>`);
+      }
+      detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button><button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button><button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></div></div>`);
+      const urlButton = safeUrl(item.url, true)
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        : '<span class="small">URLなし</span>';
+      const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
+      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-time">${esc(item.start_time)}</span>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div>${titleHtml}<div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+    }).join("")
+    : '<tr><td colspan="9" class="empty">まだ参加動画はありません。</td></tr>';
+  bindCardToggles(els.admin);
+  document.querySelectorAll("[data-act]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      if (!sessionState?.reviewUnlocked) return;
+      const { act, id } = event.currentTarget.dataset;
+      const currentItem = items.find((item) => item.id === id) || null;
+      try {
+        if (act === "approve") {
+          await postJson("/entries", { action: "status", id, status: "approved", review_note: "" });
+          setMsg(els.page, "掲載しました。", "ok");
+        } else if (act === "reject") {
+          const reviewNote = prompt("差し戻し理由を入力してください。公開ページにもこの内容が表示されます。", String(currentItem?.review_note || ""));
+          if (reviewNote === null) return;
+          if (!String(reviewNote).trim()) {
+            setMsg(els.page, "差し戻し理由を入力してください。", "err");
+            return;
+          }
+          await postJson("/entries", { action: "status", id, status: "rejected", review_note: String(reviewNote).trim() });
+          setMsg(els.page, "差し戻しにしました。", "ok");
+        } else {
+          if (!confirm("この参加動画を削除しますか？")) return;
+          await postJson("/entries", { action: "delete", id });
+          setMsg(els.page, "削除しました。", "ok");
+        }
+        await refresh(true);
+      } catch (error) {
+        setMsg(els.page, `操作に失敗しました: ${error.message || error}`, "err");
+      }
+    });
+  });
+}
+
 function applySessionUi(data) {
   const session = data?.session || null;
   const linked = Boolean(session?.discordUser);

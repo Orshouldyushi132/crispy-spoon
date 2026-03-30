@@ -777,17 +777,25 @@ function startEditingEntry(id) {
 }
 
 function bindCardToggles(scope) {
-  scope.querySelectorAll("[data-card-toggle]").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      const card = event.currentTarget.closest(".stack-card");
-      const details = card?.querySelector(".stack-card-details");
-      if (!card || !details) return;
-      const expanded = event.currentTarget.getAttribute("aria-expanded") === "true";
+  scope.querySelectorAll("[data-card-toggle]").forEach((card) => {
+    const toggle = () => {
+      const details = card.querySelector(".stack-card-details");
+      if (!details) return;
+      const expanded = card.getAttribute("aria-expanded") === "true";
       details.hidden = expanded;
       card.classList.toggle("is-expanded", !expanded);
-      event.currentTarget.setAttribute("aria-expanded", String(!expanded));
-      const label = event.currentTarget.querySelector(".stack-card-toggle");
-      if (label) label.textContent = expanded ? "詳細を開く" : "詳細を閉じる";
+      card.setAttribute("aria-expanded", String(!expanded));
+      const label = card.querySelector(".stack-card-hint");
+      if (label) label.textContent = expanded ? "クリックで詳細" : "クリックで閉じる";
+    };
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, button")) return;
+      toggle();
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      toggle();
     });
   });
 }
@@ -809,13 +817,11 @@ function drawPending(entries, trackedEntries = []) {
       if (showActions && isRejected) {
         detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button type="button" class="ghost table-edit-btn" data-edit-entry="${esc(item.id)}">修正して再申請</button></div></div>`);
       }
-      const titleHtml = detailParts.length
-        ? `<button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button>`
-        : `<div class="stack-card-title is-static"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
+      const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
         : '<span class="muted">URLなし</span>';
-      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card"><div class="stack-card-top">${badge(item.status || "approved")}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-chip">${esc(item.start_time)}</span></div>${titleHtml}<div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-top">${badge(item.status || "approved")}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-time">${esc(item.start_time)}</span>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div>${titleHtml}<div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("");
 
   const tracked = trackedEntries.filter((item) => item && item.id);
