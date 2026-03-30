@@ -929,10 +929,10 @@ function drawCommunity(currentSettings) {
     setAnchorState(els.tagSearch, "", "Xでタグを見る");
     setAnchorState(els.tagPost, "", "感想を投稿");
   }
-  setAnchorState(els.livePlaylist, currentSettings.live_playlist_url, "今見る用リスト");
-  setAnchorState(els.archivePlaylist, currentSettings.archive_playlist_url, "後追い用リスト");
+  setAnchorState(els.livePlaylist, currentSettings.live_playlist_url, "公式投稿用プレイリスト");
+  setAnchorState(els.archivePlaylist, currentSettings.archive_playlist_url, "プレラプレイリスト");
   els.playlistNote.textContent = currentSettings.live_playlist_url || currentSettings.archive_playlist_url
-    ? "リアタイ用と後追い用の導線をまとめています。"
+    ? "公式投稿用とプレラ全体のプレイリスト導線をまとめています。"
     : "再生リスト URL が設定されるとここから飛べます。";
 }
 
