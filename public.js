@@ -24,12 +24,18 @@ const DEFAULT_SETTINGS = {
 };
 
 const SLOT_LABELS = {
-  1: "1枠",
-  2: "2枠",
-  3: "3枠",
-  4: "4枠",
-  5: "K²枠",
-  6: "オリジナル枠",
+  1: "DSC枠",
+  2: "逆再生枠",
+  3: ".枠",
+  4: "..枠",
+  5: "...枠",
+  6: "表/裏枠",
+  7: "アブジェ枠",
+  8: "教育枠",
+  9: "名の星枠",
+  10: "エヌ枠",
+  11: "K²枠",
+  12: "オリジナル枠",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1230,8 +1236,8 @@ els.form.addEventListener("submit", async (event) => {
     setStatus("必須項目を入力してね。", "err");
     return;
   }
-  if (!(parent >= 1 && parent <= 6)) {
-    setStatus("枠は 1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 から選んでね。", "err");
+  if (!(parent >= 1 && parent <= 12)) {
+    setStatus("枠は表示されている選択肢から選んでね。", "err");
     return;
   }
   if (!okTime(time)) {

@@ -12,7 +12,7 @@ begin
 
   alter table public.kome_prerush_entries
     add constraint kome_prerush_entries_parent_slot_check
-    check (parent_slot between 1 and 6);
+    check (parent_slot between 1 and 12);
 exception
   when duplicate_object then null;
 end $$;
@@ -24,7 +24,7 @@ for insert
 to anon, authenticated
 with check (
   status = 'pending'
-  and parent_slot between 1 and 6
+  and parent_slot between 1 and 12
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
   and review_note = ''
   and reviewed_at is null

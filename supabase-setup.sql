@@ -2,7 +2,7 @@ create table if not exists public.kome_prerush_entries (
   id text primary key,
   artist text not null check (char_length(artist) between 1 and 80),
   title text not null check (char_length(title) between 1 and 120),
-  parent_slot integer not null check (parent_slot between 1 and 6),
+  parent_slot integer not null check (parent_slot between 1 and 12),
   start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
   url text not null check (url ~ '^https?://'),
   note text,
@@ -91,7 +91,7 @@ for insert
 to anon, authenticated
 with check (
   status = 'pending'
-  and parent_slot between 1 and 6
+  and parent_slot between 1 and 12
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
   and review_note = ''
   and reviewed_at is null

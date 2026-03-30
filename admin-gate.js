@@ -6,7 +6,7 @@
   const form = document.getElementById("adminGateForm");
   const password = document.getElementById("adminGatePassword");
   const status = document.getElementById("adminGateStatus");
-  const scripts = ["./pickers.js?v=3", "./motion.js?v=2", "./admin.js?v=12"];
+  const scripts = ["./pickers.js?v=3", "./motion.js?v=2", "./admin.js?v=13"];
 
   if (!gate || !shell || !form || !password || !status) return;
 

@@ -406,8 +406,8 @@ export async function createPublicEntry(env, request, body) {
   if (!title || title.length > 120) {
     throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
   }
-  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 6) {
-    throw new HttpError(400, "枠は 1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 から選んでください。");
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 12) {
+    throw new HttpError(400, "枠は表示されている選択肢から選んでください。");
   }
   if (!okTime(startTime)) {
     throw new HttpError(400, "開始時刻の形式が正しくありません。");
@@ -496,8 +496,8 @@ export async function updatePublicEntry(env, request, body) {
   if (!title || title.length > 120) {
     throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
   }
-  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 6) {
-    throw new HttpError(400, "枠は 1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 から選んでください。");
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 12) {
+    throw new HttpError(400, "枠は表示されている選択肢から選んでください。");
   }
   if (!okTime(startTime)) {
     throw new HttpError(400, "開始時刻の形式が正しくありません。");

@@ -387,12 +387,18 @@
           <div class="picker" data-picker="select" data-chip="FRAME" data-compact="true">
             <select id="laneFilter">
               <option value="">全枠</option>
-              <option value="1">1枠</option>
-              <option value="2">2枠</option>
-              <option value="3">3枠</option>
-              <option value="4">4枠</option>
-              <option value="5">K²枠</option>
-              <option value="6">オリジナル枠</option>
+              <option value="1">DSC枠</option>
+              <option value="2">逆再生枠</option>
+              <option value="3">.枠</option>
+              <option value="4">..枠</option>
+              <option value="5">...枠</option>
+              <option value="6">表/裏枠</option>
+              <option value="7">アブジェ枠</option>
+              <option value="8">教育枠</option>
+              <option value="9">名の星枠</option>
+              <option value="10">エヌ枠</option>
+              <option value="11">K²枠</option>
+              <option value="12">オリジナル枠</option>
             </select>
           </div>
         </label>
@@ -534,7 +540,7 @@
         </div>
         <div class="guide">
           <strong>枠</strong>
-          <p class="small">その動画がプレミア公開で使う時間帯のことです。参加者は枠の近さも見ながら時刻を選びます。</p>
+          <p class="small">このページでは動画の系譜や模倣元ごとの分類を枠として表示しています。タイムテーブル上では同じ枠の並びも追いやすくなります。</p>
         </div>
         <div class="guide">
           <strong>刻む</strong>
@@ -551,7 +557,7 @@
       </div>
       <div class="guide">
         <strong>枠の見方</strong>
-        <p class="small">このページでは界隈で使われる模倣元の系譜に合わせて、1枠 / 2枠 / 3枠 / 4枠 / K²枠 / オリジナル枠 で整理しています。</p>
+        <p class="small">このページでは界隈で使われる模倣元の系譜に合わせて、DSC枠 / 逆再生枠 / .枠 / ..枠 / ...枠 / 表/裏枠 / アブジェ枠 / 教育枠 / 名の星枠 / エヌ枠 / K²枠 / オリジナル枠 で整理しています。</p>
       </div>
     </section>
 
@@ -607,12 +613,18 @@
                 <label for="parentSlot">枠</label>
                 <div class="picker" data-picker="select" data-chip="FRAME">
                   <select id="parentSlot" name="parentSlot" required>
-                    <option value="1">1枠</option>
-                    <option value="2">2枠</option>
-                    <option value="3">3枠</option>
-                    <option value="4">4枠</option>
-                    <option value="5">K²枠</option>
-                    <option value="6">オリジナル枠</option>
+                    <option value="1">DSC枠</option>
+                    <option value="2">逆再生枠</option>
+                    <option value="3">.枠</option>
+                    <option value="4">..枠</option>
+                    <option value="5">...枠</option>
+                    <option value="6">表/裏枠</option>
+                    <option value="7">アブジェ枠</option>
+                    <option value="8">教育枠</option>
+                    <option value="9">名の星枠</option>
+                    <option value="10">エヌ枠</option>
+                    <option value="11">K²枠</option>
+                    <option value="12">オリジナル枠</option>
                   </select>
                 </div>
               </div>
@@ -664,7 +676,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=15"></script>
+  <script src="./public.js?v=16"></script>
   <script type="application/json" id="legacyPublicScript" hidden>
     if(false){
     const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",LF="kome_prerush_viewer_favorites_v1";
