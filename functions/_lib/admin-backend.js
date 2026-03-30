@@ -6,6 +6,9 @@ const TABLES = {
   settings: "kome_prerush_settings",
 };
 
+const ENTRY_SELECT_BASE = "id,artist,title,parent_slot,start_time,url,note,status,created_at";
+const ENTRY_SELECT_WITH_REVIEW = `${ENTRY_SELECT_BASE},review_note,reviewed_at`;
+
 const DEFAULT_SETTINGS = {
   id: "default",
   event_date: "2026-08-18",
@@ -175,6 +178,28 @@ function withDefaultSettings(row) {
   return row ? { ...DEFAULT_SETTINGS, ...row } : { ...DEFAULT_SETTINGS };
 }
 
+function isMissingEntryColumnError(error, column) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return (
+    error instanceof HttpError
+    && message.includes("column")
+    && message.includes(TABLES.entries.toLowerCase())
+    && message.includes(String(column || "").toLowerCase())
+  );
+}
+
+function normalizeEntryRow(row) {
+  return {
+    ...row,
+    review_note: String(row?.review_note || ""),
+    reviewed_at: row?.reviewed_at || null,
+  };
+}
+
+function normalizeEntryRows(rows) {
+  return Array.isArray(rows) ? rows.map(normalizeEntryRow) : [];
+}
+
 export async function getPublicSnapshot(env) {
   const [entries, official, settingsRows] = await Promise.all([
     supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&status=eq.approved&order=start_time.asc`),
@@ -192,20 +217,36 @@ export async function getPublicSnapshot(env) {
 export async function getPublicEntryStatuses(env, request, ids) {
   const cleanIds = [...new Set((Array.isArray(ids) ? ids : []).map((value) => String(value || "").trim()).filter((value) => /^[A-Za-z0-9-]{8,120}$/.test(value)))].slice(0, 24);
   const applicantKey = await deriveApplicantKey(request, env);
-  const [byIds, byApplicant] = await Promise.all([
-    cleanIds.length
-      ? supabaseRequest(
-          env,
-          `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,review_note,reviewed_at,created_at&id=in.(${cleanIds.map((value) => encodeURIComponent(value)).join(",")})&order=created_at.desc`,
-        )
-      : Promise.resolve([]),
-    applicantKey
-      ? supabaseRequest(
-          env,
-          `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,review_note,reviewed_at,created_at&applicant_key=eq.${encodeURIComponent(applicantKey)}&order=created_at.desc&limit=12`,
-        )
-      : Promise.resolve([]),
-  ]);
+  const loadByIds = (select) => cleanIds.length
+    ? supabaseRequest(
+        env,
+        `${TABLES.entries}?select=${select}&id=in.(${cleanIds.map((value) => encodeURIComponent(value)).join(",")})&order=created_at.desc`,
+      )
+    : Promise.resolve([]);
+  const loadByApplicant = (select) => applicantKey
+    ? supabaseRequest(
+        env,
+        `${TABLES.entries}?select=${select}&applicant_key=eq.${encodeURIComponent(applicantKey)}&order=created_at.desc&limit=12`,
+      )
+    : Promise.resolve([]);
+  let byIds = [];
+  let byApplicant = [];
+  try {
+    [byIds, byApplicant] = await Promise.all([
+      loadByIds(ENTRY_SELECT_WITH_REVIEW),
+      loadByApplicant(ENTRY_SELECT_WITH_REVIEW),
+    ]);
+  } catch (error) {
+    const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
+    const applicantColumnMissing = isMissingEntryColumnError(error, "applicant_key");
+    if (!reviewColumnsMissing && !applicantColumnMissing) {
+      throw error;
+    }
+    [byIds, byApplicant] = await Promise.all([
+      loadByIds(reviewColumnsMissing ? ENTRY_SELECT_BASE : ENTRY_SELECT_WITH_REVIEW),
+      applicantColumnMissing ? Promise.resolve([]) : loadByApplicant(reviewColumnsMissing ? ENTRY_SELECT_BASE : ENTRY_SELECT_WITH_REVIEW),
+    ]);
+  }
   const merged = [...(byApplicant || []), ...(byIds || [])];
   const seen = new Set();
   const entries = [];
@@ -213,7 +254,7 @@ export async function getPublicEntryStatuses(env, request, ids) {
     const key = String(item?.id || "").trim();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    entries.push(item);
+    entries.push(normalizeEntryRow(item));
   }
   return {
     ok: true,
@@ -222,14 +263,22 @@ export async function getPublicEntryStatuses(env, request, ids) {
 }
 
 export async function getAdminSnapshot(env) {
-  const [entries, official, settingsRows] = await Promise.all([
-    supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,review_note,reviewed_at,created_at&order=created_at.asc`),
+  let entries;
+  try {
+    entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_WITH_REVIEW}&order=created_at.asc`);
+  } catch (error) {
+    if (!isMissingEntryColumnError(error, "review_note") && !isMissingEntryColumnError(error, "reviewed_at")) {
+      throw error;
+    }
+    entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_BASE}&order=created_at.asc`);
+  }
+  const [official, settingsRows] = await Promise.all([
     supabaseRequest(env, `${TABLES.official}?select=id,title,start_time,url,note,created_at&order=start_time.asc`),
     supabaseRequest(env, `${TABLES.settings}?select=id,event_date,official_name,official_url,event_hashtag,x_search_url,live_playlist_url,archive_playlist_url,entry_close_minutes&id=eq.default`),
   ]);
   return {
     ok: true,
-    entries: entries || [],
+    entries: normalizeEntryRows(entries || []),
     official: official || [],
     settings: withDefaultSettings(settingsRows?.[0]),
   };
@@ -285,14 +334,37 @@ export async function createPublicEntry(env, request, body) {
     applicant_key: applicantKey,
     created_at: new Date().toISOString(),
   };
+  const legacyPayload = {
+    id: payload.id,
+    artist,
+    title,
+    parent_slot: parentSlot,
+    start_time: startTime,
+    url,
+    note,
+    status: "pending",
+    created_at: payload.created_at,
+  };
 
-  await supabaseRequest(env, TABLES.entries, {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify([payload]),
-  });
-
-  return { ok: true, entry: payload };
+  try {
+    await supabaseRequest(env, TABLES.entries, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify([payload]),
+    });
+    return { ok: true, entry: payload };
+  } catch (error) {
+    const optionalColumnsMissing = ["review_note", "reviewed_at", "applicant_key"].some((column) => isMissingEntryColumnError(error, column));
+    if (!optionalColumnsMissing) {
+      throw error;
+    }
+    await supabaseRequest(env, TABLES.entries, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify([legacyPayload]),
+    });
+    return { ok: true, entry: normalizeEntryRow(legacyPayload) };
+  }
 }
 
 export async function saveSettings(env, payload) {
@@ -382,15 +454,30 @@ export async function mutateEntry(env, body) {
     if (reviewNote.length > 300) {
       throw new HttpError(400, "差し戻し理由は 300 文字以内で入力してください。");
     }
-    await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        status,
-        review_note: status === "rejected" ? reviewNote : "",
-        reviewed_at: status === "pending" ? null : new Date().toISOString(),
-      }),
-    });
+    try {
+      await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          status,
+          review_note: status === "rejected" ? reviewNote : "",
+          reviewed_at: status === "pending" ? null : new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
+      if (!reviewColumnsMissing) {
+        throw error;
+      }
+      if (status === "rejected") {
+        throw new HttpError(409, "差し戻し理由の保存に必要な列がまだありません。Supabase で supabase-setup.sql を再実行してください。");
+      }
+      await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ status }),
+      });
+    }
     return { ok: true };
   }
   throw new HttpError(400, "未対応の参加登録操作です。");
