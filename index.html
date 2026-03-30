@@ -112,12 +112,21 @@
     .dock .primary{background:linear-gradient(90deg,var(--cyan),var(--mint));color:#061018}
     .table{overflow:auto;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.02)}
     table{width:100%;min-width:760px;border-collapse:collapse}
+    .schedule-table{min-width:1160px}
     th,td{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top}
-    th{background:rgba(255,255,255,.03);font-size:.84rem}
+    th{background:rgba(255,255,255,.03);font-size:.84rem;white-space:nowrap}
     tr:last-child td{border-bottom:none}
-    .song{display:block;margin-bottom:4px;font-weight:900}
+    .song{display:block;margin-bottom:4px;font-weight:900;font-size:1.04rem;line-height:1.28;word-break:keep-all}
     .t{white-space:nowrap;font-weight:900}
-    .url{word-break:break-all;color:var(--cyan);font-size:.9rem}
+    .title-col,.title-cell{min-width:240px}
+    .artist-col,.artist-cell{min-width:140px}
+    .url-col,.url-cell{min-width:280px}
+    .note-col,.note-cell{min-width:150px}
+    .review-col,.review-cell{min-width:180px}
+    .action-col,.action-cell{min-width:170px}
+    .artist-cell,.note-cell,.review-cell{line-height:1.7}
+    .url{display:block;word-break:break-word;overflow-wrap:anywhere;color:var(--cyan);font-size:.9rem;line-height:1.55}
+    .table-edit-btn{min-height:40px;padding:10px 14px}
     .empty{padding:24px;color:var(--sub);text-align:center}
     .badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
@@ -130,6 +139,8 @@
     button{appearance:none;border:none;cursor:pointer;border-radius:999px;min-height:46px;padding:12px 18px;font:inherit;font-weight:900}
     .primary{background:linear-gradient(90deg,var(--cyan),var(--mint));color:#061018}
     .ghost{background:rgba(255,255,255,.04);color:var(--text);border:1px solid rgba(255,255,255,.1)}
+    .form-mode{margin:0 0 14px}
+    .form-mode.is-editing{color:var(--cyan)}
     .status{min-height:1.5em;margin-top:12px;font-size:.92rem;font-weight:700}
     .status.ok{color:var(--green)}
     .status.err{color:var(--red)}
@@ -489,6 +500,7 @@
             </div>
           </div>
           <form id="entryForm">
+            <p class="note form-mode" id="entryFormMode">プレミア公開を予約してから内容を送信してください。</p>
             <label for="artist">投稿名義</label>
             <input id="artist" name="artist" maxlength="80" placeholder="例：炊飯器 / おこめP" required>
             <label for="title">動画タイトル / 曲名</label>
@@ -512,7 +524,7 @@
             <p class="mini-note">視聴者がそのまま動画ページへ飛べる URL を登録してください。</p>
             <label for="note">ひとこと / 補足</label>
             <textarea id="note" name="note" maxlength="300" placeholder="合作 / 初投稿 / 予約投稿済み / ゲリラ参加 など"></textarea>
-            <div class="btns"><button class="primary" type="submit">参加登録を送信</button><button class="ghost" type="button" id="clearLocal">ローカル登録を消す</button></div>
+            <div class="btns"><button class="primary" type="submit" id="entrySubmitBtn">参加登録を送信</button><button class="ghost" type="button" id="resetEntryFormBtn">入力をリセット</button></div>
             <div id="status" class="status"></div>
           </form>
           <div class="subsection" style="margin-top:16px">
@@ -528,9 +540,9 @@
         <main>
           <p class="note" id="entryReviewNotice" style="margin-bottom:12px">この端末から送った参加登録の状態、または掲載済みの参加動画をここに表示します。ほかの未掲載申請は公開しません。</p>
           <div class="table">
-            <table>
-              <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th>タイトル</th><th>名義</th><th>URL</th><th>補足</th><th>審査メモ</th></tr></thead>
-              <tbody id="pendingBody"><tr><td colspan="8" class="empty">まだ登録はありません。</td></tr></tbody>
+            <table class="schedule-table">
+              <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">審査メモ</th><th class="action-col">操作</th></tr></thead>
+              <tbody id="pendingBody"><tr><td colspan="9" class="empty">まだ登録はありません。</td></tr></tbody>
             </table>
           </div>
         </main>
@@ -548,7 +560,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=7"></script>
+  <script src="./public.js?v=8"></script>
   <script>
     if(false){
     const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",LF="kome_prerush_viewer_favorites_v1";

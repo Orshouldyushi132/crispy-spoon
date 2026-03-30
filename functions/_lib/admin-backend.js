@@ -367,6 +367,104 @@ export async function createPublicEntry(env, request, body) {
   }
 }
 
+export async function updatePublicEntry(env, request, body) {
+  const id = String(body.id || "").trim();
+  const artist = String(body.artist || "").trim();
+  const title = String(body.title || "").trim();
+  const parentSlot = Number(body.parent_slot);
+  const startTime = String(body.start_time || "").trim();
+  const url = safeUrl(body.url, false);
+  const note = String(body.note || "").trim();
+  const applicantKey = await deriveApplicantKey(request, env);
+
+  if (!id) {
+    throw new HttpError(400, "修正する参加登録が見つかりません。");
+  }
+  if (!applicantKey) {
+    throw new HttpError(403, "本人確認に必要な情報が取得できませんでした。");
+  }
+  if (!artist || artist.length > 80) {
+    throw new HttpError(400, "投稿名義は 1〜80 文字で入力してください。");
+  }
+  if (!title || title.length > 120) {
+    throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
+  }
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 5) {
+    throw new HttpError(400, "レーンは 1〜5 から選んでください。");
+  }
+  if (!okTime(startTime)) {
+    throw new HttpError(400, "開始時刻の形式が正しくありません。");
+  }
+  if (!url) {
+    throw new HttpError(400, "公開 URL を入力してください。");
+  }
+  if (note.length > 300) {
+    throw new HttpError(400, "補足は 300 文字以内で入力してください。");
+  }
+
+  let rows;
+  try {
+    rows = await supabaseRequest(
+      env,
+      `${TABLES.entries}?select=${ENTRY_SELECT_WITH_REVIEW},applicant_key&id=eq.${encodeURIComponent(id)}&limit=1`,
+    );
+  } catch (error) {
+    const migrationMissing = isMissingEntryColumnError(error, "review_note")
+      || isMissingEntryColumnError(error, "reviewed_at")
+      || isMissingEntryColumnError(error, "applicant_key");
+    if (!migrationMissing) {
+      throw error;
+    }
+    throw new HttpError(409, "修正再申請を使うには、Supabase で supabase-migrate-review-notice.sql を実行してください。");
+  }
+
+  const current = rows?.[0];
+  if (!current) {
+    throw new HttpError(404, "対象の参加登録が見つかりません。");
+  }
+  if (String(current.applicant_key || "") !== applicantKey) {
+    throw new HttpError(403, "この参加登録は修正できません。");
+  }
+  if (String(current.status || "") !== "rejected") {
+    throw new HttpError(409, "差し戻し済みの参加登録だけ修正できます。");
+  }
+
+  const existing = await supabaseRequest(
+    env,
+    `${TABLES.entries}?select=id&status=eq.approved&parent_slot=eq.${parentSlot}&start_time=eq.${encodeURIComponent(startTime)}&id=not.eq.${encodeURIComponent(id)}&limit=1`,
+  );
+  if (Array.isArray(existing) && existing.length) {
+    throw new HttpError(409, "そのレーン・時間にはすでに掲載済みの動画があります。");
+  }
+
+  const payload = {
+    artist,
+    title,
+    parent_slot: parentSlot,
+    start_time: startTime,
+    url,
+    note,
+    status: "pending",
+    review_note: "",
+    reviewed_at: null,
+  };
+
+  await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    ok: true,
+    entry: normalizeEntryRow({
+      ...current,
+      ...payload,
+      id,
+    }),
+  };
+}
+
 export async function saveSettings(env, payload) {
   const officialUrl = safeUrl(payload.official_url, false);
   if (!String(payload.official_name || "").trim()) {
