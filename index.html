@@ -526,11 +526,11 @@
           </div>
         </aside>
         <main>
-          <p class="note" style="margin-bottom:12px">この端末から送った参加登録の状態、または承認済みの登録をここに表示します。ほかの未掲載申請は公開しません。</p>
+          <p class="note" id="entryReviewNotice" style="margin-bottom:12px">この端末から送った参加登録の状態、または掲載済みの参加動画をここに表示します。ほかの未掲載申請は公開しません。</p>
           <div class="table">
             <table>
-              <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th>タイトル</th><th>名義</th><th>URL</th><th>補足</th></tr></thead>
-              <tbody id="pendingBody"><tr><td colspan="7" class="empty">まだ登録はありません。</td></tr></tbody>
+              <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th>タイトル</th><th>名義</th><th>URL</th><th>補足</th><th>審査メモ</th></tr></thead>
+              <tbody id="pendingBody"><tr><td colspan="8" class="empty">まだ登録はありません。</td></tr></tbody>
             </table>
           </div>
         </main>
@@ -548,7 +548,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=6"></script>
+  <script src="./public.js?v=7"></script>
   <script>
     if(false){
     const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",LF="kome_prerush_viewer_favorites_v1";

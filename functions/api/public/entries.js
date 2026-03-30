@@ -3,7 +3,7 @@ import { createPublicEntry, errorResponse, HttpError, jsonResponse } from "../..
 export const onRequestPost = async (context) => {
   try {
     const body = await context.request.json().catch(() => ({}));
-    const result = await createPublicEntry(context.env, body);
+    const result = await createPublicEntry(context.env, context.request, body);
     return jsonResponse(result, { status: 201 });
   } catch (error) {
     if (error instanceof HttpError) {

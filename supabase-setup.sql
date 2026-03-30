@@ -7,6 +7,9 @@
   url text not null check (url ~ '^https?://'),
   note text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  review_note text not null default '',
+  reviewed_at timestamptz,
+  applicant_key text,
   created_at timestamptz not null default now()
 );
 
@@ -32,6 +35,13 @@ create table if not exists public.kome_prerush_settings (
   updated_at timestamptz not null default now()
 );
 
+alter table public.kome_prerush_entries add column if not exists review_note text not null default '';
+alter table public.kome_prerush_entries add column if not exists reviewed_at timestamptz;
+alter table public.kome_prerush_entries add column if not exists applicant_key text;
+
+create index if not exists kome_prerush_entries_applicant_key_idx
+  on public.kome_prerush_entries (applicant_key, created_at desc);
+
 alter table public.kome_prerush_entries enable row level security;
 alter table public.kome_prerush_official_videos enable row level security;
 alter table public.kome_prerush_settings enable row level security;
@@ -52,6 +62,9 @@ with check (
   status = 'pending'
   and parent_slot between 1 and 5
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
+  and review_note = ''
+  and reviewed_at is null
+  and applicant_key is null
 );
 
 drop policy if exists "public can read official videos" on public.kome_prerush_official_videos;

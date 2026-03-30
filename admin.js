@@ -141,18 +141,25 @@ function drawOfficial(list) {
 function drawEntries(list) {
   const items = [...list].sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
   els.admin.innerHTML = items.length
-    ? items.map((item) => `<tr><td data-label="状態">${statusBadge(item.status)}</td><td class="t" data-label="レーン">レーン${esc(item.parent_slot)}</td><td class="t" data-label="時間">${esc(item.start_time)}</td><td data-label="タイトル"><span class="song">${esc(item.title)}</span></td><td data-label="名義">${esc(item.artist)}</td><td data-label="URL">${safeUrl(item.url, true) ? `<a class="url" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">${esc(safeUrl(item.url, true))}</a>` : '<span class="small">URLなし</span>'}</td><td data-label="補足">${esc(item.note) || "—"}</td><td data-label="操作"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button> <button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button> <button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></td></tr>`).join("")
-    : '<tr><td colspan="8" class="empty">まだ参加登録はありません。</td></tr>';
+    ? items.map((item) => `<tr><td data-label="状態">${statusBadge(item.status)}</td><td class="t" data-label="レーン">レーン${esc(item.parent_slot)}</td><td class="t" data-label="時間">${esc(item.start_time)}</td><td data-label="タイトル"><span class="song">${esc(item.title)}</span></td><td data-label="名義">${esc(item.artist)}</td><td data-label="URL">${safeUrl(item.url, true) ? `<a class="url" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">${esc(safeUrl(item.url, true))}</a>` : '<span class="small">URLなし</span>'}</td><td data-label="補足">${esc(item.note) || "—"}</td><td data-label="差し戻し理由">${esc(item.review_note || "") || "—"}</td><td data-label="操作"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button> <button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button> <button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></td></tr>`).join("")
+    : '<tr><td colspan="9" class="empty">まだ参加登録はありません。</td></tr>';
   document.querySelectorAll("[data-act]").forEach((button) => {
     button.addEventListener("click", async (event) => {
       if (!sessionState?.reviewUnlocked) return;
       const { act, id } = event.currentTarget.dataset;
+      const currentItem = items.find((item) => item.id === id) || null;
       try {
         if (act === "approve") {
-          await postJson("/entries", { action: "status", id, status: "approved" });
+          await postJson("/entries", { action: "status", id, status: "approved", review_note: "" });
           setMsg(els.page, "掲載したよ。", "ok");
         } else if (act === "reject") {
-          await postJson("/entries", { action: "status", id, status: "rejected" });
+          const reviewNote = prompt("差し戻し理由を入力してください。申請者側にもこの内容が表示されます。", String(currentItem?.review_note || ""));
+          if (reviewNote === null) return;
+          if (!String(reviewNote).trim()) {
+            setMsg(els.page, "差し戻し理由を入力してね。", "err");
+            return;
+          }
+          await postJson("/entries", { action: "status", id, status: "rejected", review_note: String(reviewNote).trim() });
           setMsg(els.page, "差し戻しにしたよ。", "ok");
         } else {
           if (!confirm("この参加登録を削除する？")) return;

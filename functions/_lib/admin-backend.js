@@ -77,6 +77,32 @@ function okTime(value) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(value || ""));
 }
 
+function getApplicantSecret(env) {
+  return String(env.APPLICANT_LOOKUP_SECRET || env.ADMIN_SESSION_SECRET || "").trim();
+}
+
+function getApplicantFingerprint(request) {
+  if (!request) return "";
+  const ip = String(request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "")
+    .split(",")[0]
+    .trim();
+  const ua = String(request.headers.get("User-Agent") || "").trim();
+  return ip && ua ? `${ip}
+${ua}` : "";
+}
+
+async function deriveApplicantKey(request, env) {
+  const secret = getApplicantSecret(env);
+  const fingerprint = getApplicantFingerprint(request);
+  if (!secret || !fingerprint) return null;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${secret}
+${fingerprint}`),
+  );
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
 function restBase(env) {
   return `${String(env.SUPABASE_URL || "").replace(/\/$/, "")}/rest/v1`;
 }
@@ -163,24 +189,41 @@ export async function getPublicSnapshot(env) {
   };
 }
 
-export async function getPublicEntryStatuses(env, ids) {
+export async function getPublicEntryStatuses(env, request, ids) {
   const cleanIds = [...new Set((Array.isArray(ids) ? ids : []).map((value) => String(value || "").trim()).filter((value) => /^[A-Za-z0-9-]{8,120}$/.test(value)))].slice(0, 24);
-  if (!cleanIds.length) {
-    return { ok: true, entries: [] };
+  const applicantKey = await deriveApplicantKey(request, env);
+  const [byIds, byApplicant] = await Promise.all([
+    cleanIds.length
+      ? supabaseRequest(
+          env,
+          `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,review_note,reviewed_at,created_at&id=in.(${cleanIds.map((value) => encodeURIComponent(value)).join(",")})&order=created_at.desc`,
+        )
+      : Promise.resolve([]),
+    applicantKey
+      ? supabaseRequest(
+          env,
+          `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,review_note,reviewed_at,created_at&applicant_key=eq.${encodeURIComponent(applicantKey)}&order=created_at.desc&limit=12`,
+        )
+      : Promise.resolve([]),
+  ]);
+  const merged = [...(byApplicant || []), ...(byIds || [])];
+  const seen = new Set();
+  const entries = [];
+  for (const item of merged) {
+    const key = String(item?.id || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    entries.push(item);
   }
-  const rows = await supabaseRequest(
-    env,
-    `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&id=in.(${cleanIds.map((value) => encodeURIComponent(value)).join(",")})&order=created_at.desc`,
-  );
   return {
     ok: true,
-    entries: rows || [],
+    entries,
   };
 }
 
 export async function getAdminSnapshot(env) {
   const [entries, official, settingsRows] = await Promise.all([
-    supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&order=created_at.asc`),
+    supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,review_note,reviewed_at,created_at&order=created_at.asc`),
     supabaseRequest(env, `${TABLES.official}?select=id,title,start_time,url,note,created_at&order=start_time.asc`),
     supabaseRequest(env, `${TABLES.settings}?select=id,event_date,official_name,official_url,event_hashtag,x_search_url,live_playlist_url,archive_playlist_url,entry_close_minutes&id=eq.default`),
   ]);
@@ -192,13 +235,14 @@ export async function getAdminSnapshot(env) {
   };
 }
 
-export async function createPublicEntry(env, body) {
+export async function createPublicEntry(env, request, body) {
   const artist = String(body.artist || "").trim();
   const title = String(body.title || "").trim();
   const parentSlot = Number(body.parent_slot);
   const startTime = String(body.start_time || "").trim();
   const url = safeUrl(body.url, false);
   const note = String(body.note || "").trim();
+  const applicantKey = await deriveApplicantKey(request, env);
 
   if (!artist || artist.length > 80) {
     throw new HttpError(400, "投稿名義は 1〜80 文字で入力してください。");
@@ -236,6 +280,9 @@ export async function createPublicEntry(env, body) {
     url,
     note,
     status: "pending",
+    review_note: "",
+    reviewed_at: null,
+    applicant_key: applicantKey,
     created_at: new Date().toISOString(),
   };
 
@@ -325,13 +372,24 @@ export async function mutateEntry(env, body) {
   }
   if (action === "status") {
     const status = String(body.status || "").trim();
+    const reviewNote = String(body.review_note || "").trim();
     if (!["approved", "rejected", "pending"].includes(status)) {
       throw new HttpError(400, "状態の指定が正しくありません。");
+    }
+    if (status === "rejected" && !reviewNote) {
+      throw new HttpError(400, "差し戻し理由を入力してください。");
+    }
+    if (reviewNote.length > 300) {
+      throw new HttpError(400, "差し戻し理由は 300 文字以内で入力してください。");
     }
     await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        review_note: status === "rejected" ? reviewNote : "",
+        reviewed_at: status === "pending" ? null : new Date().toISOString(),
+      }),
     });
     return { ok: true };
   }

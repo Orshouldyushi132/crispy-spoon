@@ -46,6 +46,7 @@ HTML ファイルを単独で開くなど API がない確認環境では、`pub
 - `kome_prerush_official_v1`
 - `kome_prerush_settings_v1`
 - `kome_prerush_viewer_favorites_v1`
+- `kome_prerush_tracked_submission_ids_v1`
 
 ### 管理ページも確認したいとき
 
@@ -77,6 +78,9 @@ create table public.kome_prerush_entries (
   url text not null check (url ~ '^https?://'),
   note text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  review_note text not null default '',
+  reviewed_at timestamptz,
+  applicant_key text,
   created_at timestamptz not null default now()
 );
 
@@ -103,6 +107,8 @@ create table public.kome_prerush_settings (
 );
 ```
 
+既存の Supabase プロジェクトを使っている場合も、この `supabase-setup.sql` をもう一度実行してください。`review_note` / `reviewed_at` / `applicant_key` 列が追加され、差し戻し理由の通知と本人向け状態確認に使われます。
+
 ### 公開ページ向けの RLS
 
 ```sql
@@ -124,6 +130,9 @@ with check (
   status = 'pending'
   and parent_slot between 1 and 5
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
+  and review_note = ''
+  and reviewed_at is null
+  and applicant_key is null
 );
 
 create policy "public can read official videos"
@@ -193,10 +202,12 @@ set event_date = excluded.event_date,
 - `DISCORD_REDIRECT_URI`: 任意。未設定なら `https://<your-domain>/api/admin/discord/callback`
 - `SUPABASE_URL`: Supabase Project URL
 - `SUPABASE_SERVICE_ROLE_KEY`: 管理 API 用の service role key
+- `APPLICANT_LOOKUP_SECRET`: 申請者の接続情報から本人確認用キーを生成するための秘密値
 - `ADMIN_REVIEW_PASSWORD`: 審査モード解錠用パスワード
 
 注意:
 - `SUPABASE_SERVICE_ROLE_KEY` は絶対にブラウザに出さないでください。
+- `APPLICANT_LOOKUP_SECRET` は `ADMIN_SESSION_SECRET` と別の長いランダム文字列を推奨します。
 - `ADMIN_REVIEW_PASSWORD` はコードの既定値に頼らず、必ず Cloudflare 側の環境変数で上書きしてください。
 
 ### Discord Developer Portal 側で必要な設定
