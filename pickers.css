@@ -84,7 +84,7 @@
 .picker-side{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:0;
   flex-shrink:0;
 }
 
@@ -244,8 +244,7 @@
 .picker-time-top{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:12px;
+  justify-content:flex-start;
   margin-bottom:12px;
   padding:6px 4px 10px;
   border-bottom:1px solid rgba(255,255,255,.06);
@@ -336,15 +335,8 @@
   font-size:1.02rem;
 }
 
-.picker-compact .picker-chip{
-  min-width:54px;
-  min-height:30px;
-  padding:6px 9px;
-  font-size:.64rem;
-}
-
 .picker-compact .picker-side{
-  gap:8px;
+  gap:0;
 }
 
 @media (max-width:760px){
