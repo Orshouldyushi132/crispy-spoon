@@ -8,7 +8,7 @@ const TABLES = {
 };
 
 const ENTRY_SELECT_BASE_LEGACY = "id,artist,title,parent_slot,start_time,url,note,status,created_at";
-const ENTRY_SELECT_BASE = `${ENTRY_SELECT_BASE_LEGACY},parent_number`;
+const ENTRY_SELECT_BASE = `${ENTRY_SELECT_BASE_LEGACY},parent_number,parent_slot_detail`;
 const ENTRY_SELECT_WITH_REVIEW_LEGACY = `${ENTRY_SELECT_BASE_LEGACY},review_note,reviewed_at`;
 const ENTRY_SELECT_WITH_REVIEW = `${ENTRY_SELECT_BASE},review_note,reviewed_at`;
 const DELETED_ENTRY_NOTE = "あなたの動画申請は削除されました。";
@@ -212,6 +212,7 @@ function normalizeEntryRow(row) {
   return {
     ...row,
     parent_number: Number(row?.parent_number || 0),
+    parent_slot_detail: String(row?.parent_slot_detail || ""),
     review_note: String(row?.review_note || ""),
     reviewed_at: row?.reviewed_at || null,
   };
@@ -253,7 +254,7 @@ export async function getPublicSnapshot(env) {
   try {
     entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_BASE}&status=eq.approved&order=start_time.asc`);
   } catch (error) {
-    if (!isMissingEntryColumnError(error, "parent_number")) throw error;
+    if (!isMissingEntryColumnError(error, "parent_number") && !isMissingEntryColumnError(error, "parent_slot_detail")) throw error;
     entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_BASE_LEGACY}&status=eq.approved&order=start_time.asc`);
   }
   const [official, settingsRows] = await Promise.all([
@@ -293,7 +294,7 @@ export async function getPublicEntryStatuses(env, request, ids) {
   } catch (error) {
     const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
     const applicantColumnMissing = isMissingEntryColumnError(error, "applicant_key");
-    const parentColumnMissing = isMissingEntryColumnError(error, "parent_number");
+    const parentColumnMissing = isMissingEntryColumnError(error, "parent_number") || isMissingEntryColumnError(error, "parent_slot_detail");
     if (!reviewColumnsMissing && !applicantColumnMissing && !parentColumnMissing) {
       throw error;
     }
@@ -327,7 +328,7 @@ export async function getAdminSnapshot(env) {
     entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_WITH_REVIEW}&order=created_at.asc`);
   } catch (error) {
     const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
-    const parentColumnMissing = isMissingEntryColumnError(error, "parent_number");
+    const parentColumnMissing = isMissingEntryColumnError(error, "parent_number") || isMissingEntryColumnError(error, "parent_slot_detail");
     if (!reviewColumnsMissing && !parentColumnMissing) {
       throw error;
     }
@@ -414,6 +415,7 @@ export async function createPublicEntry(env, request, body) {
   const artist = String(body.artist || "").trim();
   const title = String(body.title || "").trim();
   const parentSlot = Number(body.parent_slot);
+  const parentSlotDetail = String(body.parent_slot_detail || "").trim();
   const parentNumber = Number(body.parent_number);
   const startTime = String(body.start_time || "").trim();
   const url = safeUrl(body.url, false);
@@ -426,8 +428,14 @@ export async function createPublicEntry(env, request, body) {
   if (!title || title.length > 120) {
     throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
   }
-  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 12) {
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 13) {
     throw new HttpError(400, "枠は表示されている選択肢から選んでください。");
+  }
+  if (parentSlot === 13 && !parentSlotDetail) {
+    throw new HttpError(400, "二次模倣名を入力してください。");
+  }
+  if (parentSlotDetail.length > 80) {
+    throw new HttpError(400, "二次模倣名は 80 文字以内で入力してください。");
   }
   if (!Number.isInteger(parentNumber) || parentNumber < 1 || parentNumber > 5) {
     throw new HttpError(400, "親は 1〜5 から選んでください。");
@@ -455,6 +463,7 @@ export async function createPublicEntry(env, request, body) {
     artist,
     title,
     parent_slot: parentSlot,
+    parent_slot_detail: parentSlot === 13 ? parentSlotDetail : "",
     parent_number: parentNumber,
     start_time: startTime,
     url,
@@ -485,9 +494,12 @@ export async function createPublicEntry(env, request, body) {
     });
     return { ok: true, entry: payload };
   } catch (error) {
-    const optionalColumnsMissing = ["review_note", "reviewed_at", "applicant_key", "parent_number"].some((column) => isMissingEntryColumnError(error, column));
+    const optionalColumnsMissing = ["review_note", "reviewed_at", "applicant_key", "parent_number", "parent_slot_detail"].some((column) => isMissingEntryColumnError(error, column));
     if (!optionalColumnsMissing) {
       throw error;
+    }
+    if (parentSlot === 13 && isMissingEntryColumnError(error, "parent_slot_detail")) {
+      throw new HttpError(409, "二次模倣名の保存に必要な列がまだありません。Supabase で migration を実行してください。");
     }
     await supabaseRequest(env, TABLES.entries, {
       method: "POST",
@@ -503,6 +515,7 @@ export async function updatePublicEntry(env, request, body) {
   const artist = String(body.artist || "").trim();
   const title = String(body.title || "").trim();
   const parentSlot = Number(body.parent_slot);
+  const parentSlotDetail = String(body.parent_slot_detail || "").trim();
   const parentNumber = Number(body.parent_number);
   const startTime = String(body.start_time || "").trim();
   const url = safeUrl(body.url, false);
@@ -521,8 +534,14 @@ export async function updatePublicEntry(env, request, body) {
   if (!title || title.length > 120) {
     throw new HttpError(400, "タイトルは 1〜120 文字で入力してください。");
   }
-  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 12) {
+  if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 13) {
     throw new HttpError(400, "枠は表示されている選択肢から選んでください。");
+  }
+  if (parentSlot === 13 && !parentSlotDetail) {
+    throw new HttpError(400, "二次模倣名を入力してください。");
+  }
+  if (parentSlotDetail.length > 80) {
+    throw new HttpError(400, "二次模倣名は 80 文字以内で入力してください。");
   }
   if (!Number.isInteger(parentNumber) || parentNumber < 1 || parentNumber > 5) {
     throw new HttpError(400, "親は 1〜5 から選んでください。");
@@ -547,7 +566,7 @@ export async function updatePublicEntry(env, request, body) {
     const migrationMissing = isMissingEntryColumnError(error, "review_note")
       || isMissingEntryColumnError(error, "reviewed_at")
       || isMissingEntryColumnError(error, "applicant_key");
-    if (isMissingEntryColumnError(error, "parent_number") && !migrationMissing) {
+    if ((isMissingEntryColumnError(error, "parent_number") || isMissingEntryColumnError(error, "parent_slot_detail")) && !migrationMissing) {
       rows = await supabaseRequest(
         env,
         `${TABLES.entries}?select=${ENTRY_SELECT_WITH_REVIEW_LEGACY},applicant_key&id=eq.${encodeURIComponent(id)}&limit=1`,
@@ -586,6 +605,7 @@ export async function updatePublicEntry(env, request, body) {
     artist,
     title,
     parent_slot: parentSlot,
+    parent_slot_detail: parentSlot === 13 ? parentSlotDetail : "",
     parent_number: parentNumber,
     start_time: startTime,
     url,
@@ -602,11 +622,15 @@ export async function updatePublicEntry(env, request, body) {
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    if (!isMissingEntryColumnError(error, "parent_number")) {
+    if (!isMissingEntryColumnError(error, "parent_number") && !isMissingEntryColumnError(error, "parent_slot_detail")) {
       throw error;
+    }
+    if (parentSlot === 13 && isMissingEntryColumnError(error, "parent_slot_detail")) {
+      throw new HttpError(409, "二次模倣名の保存に必要な列がまだありません。Supabase で migration を実行してください。");
     }
     const legacyPayload = { ...payload };
     delete legacyPayload.parent_number;
+    delete legacyPayload.parent_slot_detail;
     await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },

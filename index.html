@@ -118,6 +118,7 @@
     .mini-btn{cursor:pointer;color:var(--sub)}
     .guide-actions,.helper-block{display:grid;gap:10px}
     .template-box textarea{min-height:140px}
+    .conditional-field{margin-top:12px}
     .is-disabled{pointer-events:none;opacity:.45}
     .muted{color:var(--sub);font-size:.9rem;font-weight:700}
     .dock{display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:40;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px;border-radius:22px;background:rgba(7,10,16,.94);border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
@@ -400,6 +401,7 @@
               <option value="10">エヌ枠</option>
               <option value="11">K²枠</option>
               <option value="12">オリジナル枠</option>
+              <option value="13">二次模倣</option>
             </select>
           </div>
         </label>
@@ -626,7 +628,13 @@
                     <option value="10">エヌ枠</option>
                     <option value="11">K²枠</option>
                     <option value="12">オリジナル枠</option>
+                    <option value="13">二次模倣</option>
                   </select>
+                </div>
+                <div class="conditional-field" id="secondarySlotWrap" hidden>
+                  <label for="secondarySlotDetail">二次模倣名</label>
+                  <input id="secondarySlotDetail" name="secondarySlotDetail" maxlength="80" placeholder="例: ○○派生 / △△風 など">
+                  <p class="mini-note">枠で「二次模倣」を選んだときだけ入力します。</p>
                 </div>
               </div>
               <div>
@@ -687,9 +695,9 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./pickers.js?v=4"></script>
+  <script src="./pickers.js?v=5"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=19"></script>
+  <script src="./public.js?v=20"></script>
   <script type="application/json" id="legacyPublicScript" hidden>
     if(false){
     const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",LF="kome_prerush_viewer_favorites_v1";

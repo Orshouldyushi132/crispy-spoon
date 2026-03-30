@@ -13,6 +13,7 @@ const SLOT_LABELS = {
   10: "エヌ枠",
   11: "K²枠",
   12: "オリジナル枠",
+  13: "二次模倣",
 };
 const SLOT_OPTIONS = Object.entries(SLOT_LABELS)
   .sort((a, b) => Number(a[0]) - Number(b[0]))
@@ -74,6 +75,14 @@ const clampInt = (value, min, max, fallback) => {
 const uid = () => window.crypto?.randomUUID?.() || (`id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const DELETED_REVIEW_NOTE = "あなたの動画申請は削除されました。";
 const slotLabel = (value) => SLOT_LABELS[Number(value)] || "未設定";
+const slotDisplayLabel = (value, detail = "") => {
+  const base = slotLabel(value);
+  if (Number(value) === 13) {
+    const text = String(detail || "").trim();
+    return text ? `二次模倣: ${text}` : base;
+  }
+  return base;
+};
 const parentLabel = (value) => {
   const number = Number(value);
   return Number.isInteger(number) && number >= 1 && number <= 5 ? String(number) : "未設定";
@@ -356,7 +365,7 @@ function drawEntries(list) {
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URLなし</span>';
-      return `<tr class="stack-card-row"><td colspan="10"><article class="stack-card"><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">${esc(slotLabel(item.parent_slot))}</span><span class="stack-chip">親${esc(parentLabel(item.parent_number))}</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
+      return `<tr class="stack-card-row"><td colspan="10"><article class="stack-card"><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">${esc(slotDisplayLabel(item.parent_slot, item.parent_slot_detail))}</span><span class="stack-chip">親${esc(parentLabel(item.parent_number))}</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
     }).join("")
     : '<tr><td colspan="10" class="empty">まだ参加登録はありません。</td></tr>';
   bindCardToggles(els.admin);
@@ -466,7 +475,7 @@ function drawEntries(list) {
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URLなし</span>';
       const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
-      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotLabel(item.parent_slot))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">親</span><span class="stack-summary-value">${esc(parentLabel(item.parent_number))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
+      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotDisplayLabel(item.parent_slot, item.parent_slot_detail))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">親</span><span class="stack-summary-value">${esc(parentLabel(item.parent_number))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
       return `<tr class="stack-card-row"><td colspan="10"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status">${statusBadge(item.status)}</div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">曲名</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer"><div class="stack-card-status">${urlButton}</div></div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("")
     : '<tr><td colspan="10" class="empty">まだ参加動画はありません。</td></tr>';

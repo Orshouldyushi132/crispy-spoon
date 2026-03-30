@@ -73,7 +73,8 @@ create table public.kome_prerush_entries (
   id text primary key,
   artist text not null check (char_length(artist) between 1 and 80),
   title text not null check (char_length(title) between 1 and 120),
-  parent_slot integer not null check (parent_slot between 1 and 12),
+  parent_slot integer not null check (parent_slot between 1 and 13),
+  parent_slot_detail text not null default '' check (char_length(parent_slot_detail) <= 80),
   parent_number integer not null default 1 check (parent_number between 1 and 5),
   start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
   url text not null check (url ~ '^https?://'),
@@ -110,7 +111,7 @@ create table public.kome_prerush_settings (
 
 既存の Supabase プロジェクトを使っている場合も、この `supabase-setup.sql` をもう一度実行してください。`review_note` / `reviewed_at` / `applicant_key` 列に加えて、申請削除通知に使う `deleted` 状態と `parent_number` 列も反映されます。
 
-`supabase-setup.sql` 全体ではなく差分だけを当てたいときは、`supabase-migrate-review-notice.sql` で列追加、`supabase-migrate-deleted-status.sql` で削除通知用の状態追加、`supabase-migrate-parent-number.sql` で親列追加を反映できます。
+`supabase-setup.sql` 全体ではなく差分だけを当てたいときは、`supabase-migrate-review-notice.sql` で列追加、`supabase-migrate-deleted-status.sql` で削除通知用の状態追加、`supabase-migrate-parent-number.sql` で親列追加、`supabase-migrate-secondary-slot.sql` で二次模倣用の枠補足列を反映できます。
 
 ### 公開ページ向けの RLS
 
@@ -131,8 +132,9 @@ for insert
 to anon, authenticated
 with check (
   status = 'pending'
-  and parent_slot between 1 and 12
+  and parent_slot between 1 and 13
   and parent_number between 1 and 5
+  and char_length(parent_slot_detail) <= 80
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
   and review_note = ''
   and reviewed_at is null

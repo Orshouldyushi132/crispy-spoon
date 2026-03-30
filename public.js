@@ -36,6 +36,7 @@ const SLOT_LABELS = {
   10: "エヌ枠",
   11: "K²枠",
   12: "オリジナル枠",
+  13: "二次模倣",
 };
 
 const parentLabel = (value) => {
@@ -103,6 +104,8 @@ const els = {
   artist: $("artist"),
   titleInput: $("title"),
   parentSlot: $("parentSlot"),
+  secondarySlotWrap: $("secondarySlotWrap"),
+  secondarySlotDetail: $("secondarySlotDetail"),
   parentNumber: $("parentNumber"),
   startTime: $("startTime"),
   urlInput: $("url"),
@@ -265,6 +268,14 @@ const itemKey = (item) => `${item.kind}:${item.id}`;
 const isFavorite = (item) => favorites.has(itemKey(item));
 const saveFavorites = () => write(LF, [...favorites]);
 const slotLabel = (value) => SLOT_LABELS[Number(value)] || "未設定";
+const slotDisplayLabel = (value, detail = "") => {
+  const base = slotLabel(value);
+  if (Number(value) === 13) {
+    const text = String(detail || "").trim();
+    return text ? `二次模倣: ${text}` : base;
+  }
+  return base;
+};
 
 const toggleFavorite = (item) => {
   const key = itemKey(item);
@@ -371,11 +382,11 @@ async function api(path, init = {}) {
 async function getEntriesDirect() {
   if (shared) {
     const primary = await sb.from(ET)
-      .select("id,artist,title,parent_slot,parent_number,start_time,url,note,status,created_at")
+      .select("id,artist,title,parent_slot,parent_slot_detail,parent_number,start_time,url,note,status,created_at")
       .eq("status", "approved")
       .order("start_time", { ascending: true });
     if (!primary.error) return primary.data || [];
-    if (!String(primary.error?.message || "").includes("parent_number")) throw primary.error;
+    if (!String(primary.error?.message || "").includes("parent_number") && !String(primary.error?.message || "").includes("parent_slot_detail")) throw primary.error;
     const fallback = await sb.from(ET)
       .select("id,artist,title,parent_slot,start_time,url,note,status,created_at")
       .eq("status", "approved")
@@ -459,9 +470,10 @@ async function addEntry(entry) {
   if (shared) {
     const { error } = await sb.from(ET).insert(entry);
     if (error) {
-      if (!String(error.message || "").includes("parent_number")) throw error;
+      if (!String(error.message || "").includes("parent_number") && !String(error.message || "").includes("parent_slot_detail")) throw error;
       const legacyEntry = { ...entry };
       delete legacyEntry.parent_number;
+      delete legacyEntry.parent_slot_detail;
       const retry = await sb.from(ET).insert(legacyEntry);
       if (retry.error) throw retry.error;
     }
@@ -491,6 +503,7 @@ async function updateEntry(entry) {
         artist: entry.artist,
         title: entry.title,
         parent_slot: entry.parent_slot,
+        parent_slot_detail: entry.parent_slot_detail,
         parent_number: entry.parent_number,
         start_time: entry.start_time,
         url: entry.url,
@@ -500,7 +513,7 @@ async function updateEntry(entry) {
       .eq("id", entry.id)
       .eq("status", "rejected");
     if (error) {
-      if (!String(error.message || "").includes("parent_number")) throw error;
+      if (!String(error.message || "").includes("parent_number") && !String(error.message || "").includes("parent_slot_detail")) throw error;
       const retry = await sb.from(ET)
         .update({
           artist: entry.artist,
@@ -530,6 +543,7 @@ async function updateEntry(entry) {
     artist: entry.artist,
     title: entry.title,
     parent_slot: entry.parent_slot,
+    parent_slot_detail: entry.parent_slot_detail,
     parent_number: entry.parent_number,
     start_time: entry.start_time,
     url: entry.url,
@@ -567,6 +581,7 @@ const merged = (approved, official, currentSettings) => [
     artist: String(item.artist || "").trim(),
     start_time: String(item.start_time || "").trim(),
     parent_slot: Number(item.parent_slot || 0),
+    parent_slot_detail: String(item.parent_slot_detail || "").trim(),
     parent_number: Number(item.parent_number || 0),
     url: safeUrl(item.url, true),
     note: String(item.note || "").trim(),
@@ -698,7 +713,7 @@ const matchesSearch = (item) => {
     item.note,
     item.start_time,
     item.kind === "official" ? "公式予定" : "参加動画",
-    item.parent_slot ? slotLabel(item.parent_slot) : "",
+    item.parent_slot ? slotDisplayLabel(item.parent_slot, item.parent_slot_detail) : "",
   ].join(" ").toLowerCase();
   return haystack.includes(query);
 };
@@ -739,7 +754,7 @@ function drawTimeline(list) {
         <div>
           <div class="tags">
             <span class="tag ${item.kind === "official" ? "official" : "participant"}">${item.kind === "official" ? "公式予定" : "参加動画"}</span>
-            <span class="tag neutral">${item.kind === "official" ? "公式" : esc(slotLabel(item.parent_slot))}</span>
+            <span class="tag neutral">${item.kind === "official" ? "公式" : esc(slotDisplayLabel(item.parent_slot, item.parent_slot_detail))}</span>
             ${item.kind === "participant" && parentLabel(item.parent_number) ? `<span class="tag neutral">親${esc(parentLabel(item.parent_number))}</span>` : ""}
             <span class="view-badge ${phase.klass}">${esc(phase.label)}</span>
             <span class="tag neutral">${esc(overlapText)}</span>
@@ -801,12 +816,24 @@ function applyEntryFormMode() {
   els.entryReset.textContent = "入力をリセット";
 }
 
+function syncSecondarySlotField() {
+  const isSecondary = String(els.parentSlot.value || "") === "13";
+  if (els.secondarySlotWrap) {
+    els.secondarySlotWrap.hidden = !isSecondary;
+  }
+  if (!isSecondary && els.secondarySlotDetail) {
+    els.secondarySlotDetail.value = "";
+  }
+}
+
 function resetEntryForm({ keepStatus = false } = {}) {
   editingEntryId = "";
   els.form.reset();
   els.parentSlot.value = "1";
+  if (els.secondarySlotDetail) els.secondarySlotDetail.value = "";
   els.parentNumber.value = "1";
   els.startTime.value = "19:00";
+  syncSecondarySlotField();
   window.syncCustomPickers?.(els.form);
   updateEntryHelper();
   applyEntryFormMode();
@@ -817,10 +844,12 @@ function loadEntryIntoForm(entry) {
   els.artist.value = String(entry.artist || "");
   els.titleInput.value = String(entry.title || "");
   els.parentSlot.value = String(entry.parent_slot || "1");
+  if (els.secondarySlotDetail) els.secondarySlotDetail.value = String(entry.parent_slot_detail || "");
   els.parentNumber.value = String(entry.parent_number || "1");
   els.startTime.value = String(entry.start_time || "19:00");
   els.urlInput.value = String(entry.url || "");
   els.noteInput.value = String(entry.note || "");
+  syncSecondarySlotField();
   window.syncCustomPickers?.(els.form);
   updateEntryHelper();
 }
@@ -881,7 +910,7 @@ function drawPending(entries, trackedEntries = []) {
         detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button type="button" class="ghost table-edit-btn" data-edit-entry="${esc(item.id)}">修正して再申請</button></div></div>`);
       }
       const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
-      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotLabel(item.parent_slot))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">親</span><span class="stack-summary-value">${esc(parentLabel(item.parent_number) || "未設定")}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
+      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotDisplayLabel(item.parent_slot, item.parent_slot_detail))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">親</span><span class="stack-summary-value">${esc(parentLabel(item.parent_number) || "未設定")}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="muted">URLなし</span>';
@@ -1053,7 +1082,7 @@ function drawNext() {
   els.nextTime.textContent = fmtDiff(upcoming.date.getTime() - Date.now());
   els.nextText.textContent = upcoming.title;
   els.nextMeta1.textContent = owner(upcoming);
-  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotLabel(upcoming.parent_slot)}${parentLabel(upcoming.parent_number) ? ` / 親${parentLabel(upcoming.parent_number)}` : ""}`;
+  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotDisplayLabel(upcoming.parent_slot, upcoming.parent_slot_detail)}${parentLabel(upcoming.parent_number) ? ` / 親${parentLabel(upcoming.parent_number)}` : ""}`;
   els.nextKind.textContent = "承認済みの参加動画";
   els.nextState.textContent = phase.label;
   els.nextState.className = `view-badge ${phase.klass}`;
@@ -1116,7 +1145,7 @@ function updatePromoTemplate() {
   const tag = settings.event_hashtag ? `\n${settings.event_hashtag}` : "";
   const lines = [
     `${fmtDate(settings.event_date)} の米プレラに ${artist} 名義で参加予定です。`,
-    `${time} から「${title}」を ${slotLabel(els.parentSlot.value)} / ${parent ? `親${parent}` : "親未設定"} でプレミア公開します。`,
+    `${time} から「${title}」を ${slotDisplayLabel(els.parentSlot.value, els.secondarySlotDetail?.value || "")} / ${parent ? `親${parent}` : "親未設定"} でプレミア公開します。`,
     url,
   ].filter(Boolean);
   els.promoTemplate.value = `${lines.join("\n")}${tag}`.trim();
@@ -1255,8 +1284,13 @@ els.downloadFavorites.addEventListener("click", () => downloadCalendar(schedule,
 els.downloadAll.addEventListener("click", () => downloadCalendar(schedule, "all"));
 els.copyPromo.addEventListener("click", copyPromoTemplate);
 
-[els.artist, els.titleInput, els.parentSlot, els.parentNumber, els.startTime, els.urlInput, els.noteInput].forEach((element) => {
-  element.addEventListener("input", updateEntryHelper);
+[els.artist, els.titleInput, els.parentSlot, els.parentNumber, els.startTime, els.urlInput, els.noteInput, els.secondarySlotDetail].forEach((element) => {
+  element?.addEventListener("input", updateEntryHelper);
+  element?.addEventListener("change", updateEntryHelper);
+});
+els.parentSlot?.addEventListener("change", () => {
+  syncSecondarySlotField();
+  updateEntryHelper();
 });
 
 els.form.addEventListener("submit", async (event) => {
@@ -1267,6 +1301,7 @@ els.form.addEventListener("submit", async (event) => {
   const artist = String(formData.get("artist") || "").trim();
   const title = String(formData.get("title") || "").trim();
   const parent = Number(formData.get("parentSlot") || 0);
+  const parentSlotDetail = String(formData.get("secondarySlotDetail") || "").trim();
   const parentNumber = Number(formData.get("parentNumber") || 0);
   const time = String(formData.get("startTime") || "").trim();
   const url = safeUrl(formData.get("url"));
@@ -1278,8 +1313,16 @@ els.form.addEventListener("submit", async (event) => {
     setStatus("必須項目を入力してね。", "err");
     return;
   }
-  if (!(parent >= 1 && parent <= 12)) {
+  if (!(parent >= 1 && parent <= 13)) {
     setStatus("枠は表示されている選択肢から選んでね。", "err");
+    return;
+  }
+  if (parent === 13 && !parentSlotDetail) {
+    setStatus("二次模倣名を入力してね。", "err");
+    return;
+  }
+  if (parentSlotDetail.length > 80) {
+    setStatus("二次模倣名は 80 文字以内で入力してね。", "err");
     return;
   }
   if (!(parentNumber >= 1 && parentNumber <= 5)) {
@@ -1312,6 +1355,7 @@ els.form.addEventListener("submit", async (event) => {
         artist,
         title,
         parent_slot: parent,
+        parent_slot_detail: parent === 13 ? parentSlotDetail : "",
         parent_number: parentNumber,
         start_time: time,
         url,
@@ -1326,6 +1370,7 @@ els.form.addEventListener("submit", async (event) => {
         artist,
         title,
         parent_slot: parent,
+        parent_slot_detail: parent === 13 ? parentSlotDetail : "",
         parent_number: parentNumber,
         start_time: time,
         url,
@@ -1359,6 +1404,7 @@ els.dockFavorite.addEventListener("click", () => {
   document.getElementById("timetable").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
+syncSecondarySlotField();
 render().catch((error) => setStatus(`読み込みに失敗したよ: ${error.message || error}`, "err"));
 setInterval(() => {
   drawNext();
