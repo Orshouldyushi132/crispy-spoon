@@ -14,8 +14,8 @@ workers_dev = true
 [vars]
 SUPABASE_URL = "https://vebwzvnfocugswxtrwor.supabase.co"
 DISCORD_REDIRECT_URI = "https://okome-pr.orshouldempty.workers.dev/api/admin/discord/callback"
-# DISCORD_GUILD_ID = "123456789012345678"
-# DISCORD_REVIEW_ROLE_IDS = "111111111111111111,222222222222222222"
+DISCORD_GUILD_ID = "1458712723570294889"
+DISCORD_REVIEW_ROLE_IDS = "1488213161235709973"
 
 # Cloudflare Secrets Store bindings:
 # Create the account secret first, then bind it to the Worker using the same
