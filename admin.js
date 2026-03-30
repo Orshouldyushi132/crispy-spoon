@@ -72,7 +72,7 @@ const DELETED_REVIEW_NOTE = "あなたの動画申請は削除されました。
 const slotLabel = (value) => SLOT_LABELS[Number(value)] || "未設定";
 const parentLabel = (value) => {
   const number = Number(value);
-  return Number.isInteger(number) && number >= 1 && number <= 5 ? `親${number}` : "未設定";
+  return Number.isInteger(number) && number >= 1 && number <= 5 ? String(number) : "未設定";
 };
 const safeUrl = (value, allowEmpty = false) => {
   const text = String(value || "").trim();
@@ -213,10 +213,6 @@ function renderCrewList(entries = []) {
     els.crewList.innerHTML = '<div class="crew-item"><span class="small">Discord認証後に担当情報が表示されます。</span></div>';
     return;
   }
-  if (!sessionState?.reviewUnlocked) {
-    els.crewList.innerHTML = '<div class="crew-item"><span class="small">レビュー用パスワード通過後に、ほかの担当情報もここで確認できます。</span></div>';
-    return;
-  }
   if (!entries.length) {
     els.crewList.innerHTML = '<div class="crew-item"><span class="small">まだ担当情報はありません。</span></div>';
     return;
@@ -294,7 +290,7 @@ function drawEntries(list) {
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URLなし</span>';
-      return `<tr class="stack-card-row"><td colspan="10"><article class="stack-card"><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">${esc(slotLabel(item.parent_slot))}</span><span class="stack-chip">${esc(parentLabel(item.parent_number))}</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
+      return `<tr class="stack-card-row"><td colspan="10"><article class="stack-card"><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">${esc(slotLabel(item.parent_slot))}</span><span class="stack-chip">親${esc(parentLabel(item.parent_number))}</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
     }).join("")
     : '<tr><td colspan="10" class="empty">まだ参加登録はありません。</td></tr>';
   bindCardToggles(els.admin);
@@ -511,7 +507,7 @@ async function syncCrew(force = false) {
   renderCrewList(Array.isArray(snapshot.entries) ? snapshot.entries : []);
   els.crewViewerHint.textContent = sessionState.reviewUnlocked
     ? "Discord 認証済みメンバーの担当枠・曲数・使用名義を一覧で確認できます。"
-    : "いまは自分の担当情報だけ保存できます。レビュー用パスワード通過後に、ほかの担当情報もここで見られます。";
+    : "Discord 認証だけで担当一覧を確認できます。承認や差し戻しなどの審査操作はレビュー用パスワード通過後に有効になります。";
   crewReadyKey = crewKey;
 }
 

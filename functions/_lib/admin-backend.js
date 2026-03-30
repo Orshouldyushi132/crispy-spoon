@@ -356,12 +356,10 @@ export async function getCrewSnapshot(env, session) {
     `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&discord_user_id=eq.${encodeURIComponent(String(session.discordUser.id || ""))}&limit=1`,
   );
   const own = ownRows?.[0] ? normalizeCrewAssignment(ownRows[0]) : defaultCrewAssignment(session);
-  const entries = session.reviewUnlocked
-    ? await supabaseRequest(
-        env,
-        `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&order=updated_at.desc.nullslast`,
-      )
-    : [];
+  const entries = await supabaseRequest(
+    env,
+    `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&order=updated_at.desc.nullslast`,
+  );
   return {
     ok: true,
     own,

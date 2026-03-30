@@ -40,7 +40,7 @@ const SLOT_LABELS = {
 
 const parentLabel = (value) => {
   const number = Number(value);
-  return Number.isInteger(number) && number >= 1 && number <= 5 ? `親${number}` : "";
+  return Number.isInteger(number) && number >= 1 && number <= 5 ? String(number) : "";
 };
 
 const $ = (id) => document.getElementById(id);
@@ -740,7 +740,7 @@ function drawTimeline(list) {
           <div class="tags">
             <span class="tag ${item.kind === "official" ? "official" : "participant"}">${item.kind === "official" ? "公式予定" : "参加動画"}</span>
             <span class="tag neutral">${item.kind === "official" ? "公式" : esc(slotLabel(item.parent_slot))}</span>
-            ${item.kind === "participant" && parentLabel(item.parent_number) ? `<span class="tag neutral">${esc(parentLabel(item.parent_number))}</span>` : ""}
+            ${item.kind === "participant" && parentLabel(item.parent_number) ? `<span class="tag neutral">親${esc(parentLabel(item.parent_number))}</span>` : ""}
             <span class="view-badge ${phase.klass}">${esc(phase.label)}</span>
             <span class="tag neutral">${esc(overlapText)}</span>
           </div>
@@ -1053,7 +1053,7 @@ function drawNext() {
   els.nextTime.textContent = fmtDiff(upcoming.date.getTime() - Date.now());
   els.nextText.textContent = upcoming.title;
   els.nextMeta1.textContent = owner(upcoming);
-  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotLabel(upcoming.parent_slot)}${parentLabel(upcoming.parent_number) ? ` / ${parentLabel(upcoming.parent_number)}` : ""}`;
+  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotLabel(upcoming.parent_slot)}${parentLabel(upcoming.parent_number) ? ` / 親${parentLabel(upcoming.parent_number)}` : ""}`;
   els.nextKind.textContent = "承認済みの参加動画";
   els.nextState.textContent = phase.label;
   els.nextState.className = `view-badge ${phase.klass}`;
@@ -1116,7 +1116,7 @@ function updatePromoTemplate() {
   const tag = settings.event_hashtag ? `\n${settings.event_hashtag}` : "";
   const lines = [
     `${fmtDate(settings.event_date)} の米プレラに ${artist} 名義で参加予定です。`,
-    `${time} から「${title}」を ${slotLabel(els.parentSlot.value)} / ${parent || "親未設定"} でプレミア公開します。`,
+    `${time} から「${title}」を ${slotLabel(els.parentSlot.value)} / ${parent ? `親${parent}` : "親未設定"} でプレミア公開します。`,
     url,
   ].filter(Boolean);
   els.promoTemplate.value = `${lines.join("\n")}${tag}`.trim();
