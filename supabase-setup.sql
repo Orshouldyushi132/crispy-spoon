@@ -1,4 +1,4 @@
-﻿create table if not exists public.kome_prerush_entries (
+create table if not exists public.kome_prerush_entries (
   id text primary key,
   artist text not null check (char_length(artist) between 1 and 80),
   title text not null check (char_length(title) between 1 and 120),
