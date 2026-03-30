@@ -11,7 +11,19 @@
   <style>
     @font-face{font-family:"GenZenGothicKai";src:url("./assets/fonts/GenZenGothicKai.ttf") format("truetype");font-display:swap}
     :root{--bg:#05070b;--bg2:#0f141c;--bg3:#151d27;--card:rgba(17,21,28,.88);--card2:rgba(20,25,34,.96);--line:rgba(255,255,255,.08);--text:#f4f7fb;--sub:#96a2b3;--cyan:#8cd7ff;--mint:#63e6cf;--amber:#f3b14a;--green:#62e0c2;--red:#ff8894;--shadow:0 28px 70px rgba(0,0,0,.45)}
-    *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;color:var(--text);font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;background:radial-gradient(circle at top left,rgba(140,215,255,.14),transparent 22%),radial-gradient(circle at top right,rgba(99,230,207,.1),transparent 18%),linear-gradient(160deg,var(--bg),var(--bg2) 56%,var(--bg3));min-height:100vh}a{color:inherit}.wrap{width:min(1180px,calc(100% - 28px));margin:24px auto 72px}
+    *{box-sizing:border-box}[hidden]{display:none!important}html{scroll-behavior:smooth}body{margin:0;color:var(--text);font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;background:radial-gradient(circle at top left,rgba(140,215,255,.14),transparent 22%),radial-gradient(circle at top right,rgba(99,230,207,.1),transparent 18%),linear-gradient(160deg,var(--bg),var(--bg2) 56%,var(--bg3));min-height:100vh}a{color:inherit}.wrap{width:min(1180px,calc(100% - 28px));margin:24px auto 72px}
+    .site-header,.toc-card{margin-bottom:18px;padding:18px 22px;background:rgba(10,14,20,.82);border:1px solid rgba(255,255,255,.08);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:12px;z-index:30}
+    .site-brand{display:grid;gap:6px}
+    .site-brand strong{font-size:1.08rem;letter-spacing:.04em}
+    .site-brand span{color:var(--sub);font-size:.88rem}
+    .header-nav,.toc-grid{display:flex;flex-wrap:wrap;gap:10px}
+    .header-link,.toc-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);text-decoration:none;font-size:.86rem;font-weight:900}
+    .header-link:hover,.toc-link:hover{border-color:rgba(140,215,255,.22);color:var(--cyan)}
+    .toc-card{display:grid;gap:12px}
+    .toc-head{display:flex;justify-content:space-between;align-items:end;gap:12px}
+    .toc-head p{margin:0;color:var(--sub);font-size:.9rem;line-height:1.7}
+    .anchor-section{scroll-margin-top:132px}
     .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.card{padding:22px}.hero{padding:32px;display:grid;grid-template-columns:1.06fr .94fr;gap:18px;overflow:hidden;position:relative}.hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 84% 18%,rgba(140,215,255,.12),transparent 22%),linear-gradient(120deg,rgba(255,255,255,.07),transparent 44%)}.hero>*{position:relative;z-index:1}.side,.panel{padding:22px;border-radius:24px;background:linear-gradient(145deg,rgba(18,24,33,.96),rgba(11,15,21,.82));border:1px solid rgba(255,255,255,.08)}
     .eyebrow{margin:0 0 12px;color:var(--cyan);font-size:.8rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}h1,h2{margin:0;font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;letter-spacing:.02em}h1{font-size:clamp(2.25rem,5vw,4.05rem);line-height:1.05}h2{font-size:clamp(1.34rem,3vw,2rem)}p{margin:0}.lead,.note,.small{color:var(--sub);line-height:1.85}.lead{margin:16px 0 0}.hero-note{margin-top:14px}.chips,.btns{display:flex;flex-wrap:wrap;gap:10px}.chip,.badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .stats{display:flex;flex-wrap:wrap;gap:10px}.stat{flex:1 1 120px;padding:16px;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}.stat strong{display:block;margin-top:8px;font-size:1.85rem;line-height:1}.grid{display:grid;grid-template-columns:380px 1fr;gap:18px;margin-top:18px}.stack{display:grid;gap:18px}.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.auth-list{margin:12px 0 0;padding-left:18px;color:var(--sub);line-height:1.8}
@@ -90,12 +102,44 @@
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
     .badge.rejected{background:rgba(255,136,148,.12);color:var(--red)}
     @media (max-width:1020px){.hero,.grid,.auth-grid{grid-template-columns:1fr}}
-    @media (max-width:760px){.wrap{width:min(100% - 16px,100%);margin:12px auto 40px}.card{padding:18px;border-radius:22px}.stats,.btns,.chips,.table-actions{flex-direction:column}.btns button{width:100%}.row{grid-template-columns:1fr}input,textarea{font-size:16px}.table{overflow:visible;border:none;background:transparent}table{min-width:0;width:100%;display:block}thead{display:none}tbody{display:grid;gap:12px}tr{display:block;margin-bottom:0;padding:12px;border-radius:18px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}td{display:block;padding:0 0 10px;border-bottom:none;font-size:.93rem}td:last-child{padding-bottom:0}td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--sub);font-size:.78rem;font-weight:900}.empty{display:block;padding:18px 12px;border-radius:16px}}
+    @media (max-width:760px){.wrap{width:min(100% - 16px,100%);margin:12px auto 40px}.site-header{position:static;padding:16px 18px}.site-header,.toc-card,.card{border-radius:22px}.header-nav,.toc-grid,.stats,.btns,.chips,.table-actions{flex-direction:column}.header-link,.toc-link,.btns button{width:100%}.card{padding:18px}.row{grid-template-columns:1fr}input,textarea{font-size:16px}.table{overflow:visible;border:none;background:transparent}table{min-width:0;width:100%;display:block}thead{display:none}tbody{display:grid;gap:12px}tr{display:block;margin-bottom:0;padding:12px;border-radius:18px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}td{display:block;padding:0 0 10px;border-bottom:none;font-size:.93rem}td:last-child{padding-bottom:0}td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--sub);font-size:.78rem;font-weight:900}.empty{display:block;padding:18px 12px;border-radius:16px}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <section class="card hero">
+    <header class="site-header">
+      <div class="site-brand">
+        <strong>米プレラ 管理ページ</strong>
+        <span>認証、設定、審査エリアへすぐ移動できます。</span>
+      </div>
+      <nav class="header-nav" aria-label="管理ページ内ナビゲーション">
+        <a class="header-link" href="#admin-overview">概要</a>
+        <a class="header-link" href="#authCard">認証</a>
+        <a class="header-link" href="#settingsSection">設定</a>
+        <a class="header-link" href="#officialEntries">公式予定</a>
+        <a class="header-link" href="#participantEntries">参加登録</a>
+      </nav>
+    </header>
+
+    <section class="toc-card">
+      <div class="toc-head">
+        <div>
+          <p class="eyebrow" style="margin-bottom:8px">Contents</p>
+          <h2>目次</h2>
+        </div>
+        <p>必要な管理項目へそのまま移動できます。</p>
+      </div>
+      <nav class="toc-grid" aria-label="管理ページ目次">
+        <a class="toc-link" href="#admin-overview">ページ概要</a>
+        <a class="toc-link" href="#authCard">Discord認証</a>
+        <a class="toc-link" href="#settingsSection">イベント設定</a>
+        <a class="toc-link" href="#officialAdd">公式予定を追加</a>
+        <a class="toc-link" href="#officialEntries">登録済みの公式予定</a>
+        <a class="toc-link" href="#participantEntries">参加登録一覧</a>
+      </nav>
+    </section>
+
+    <section class="card hero anchor-section" id="admin-overview">
       <div>
         <p class="eyebrow">Admin Console</p>
         <h1>Discord認証で、<br>運営管理をひらく。</h1>
@@ -118,7 +162,7 @@
       </aside>
     </section>
 
-    <section class="card" id="authCard" style="margin-top:18px">
+    <section class="card anchor-section" id="authCard" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Discord Auth</p>
@@ -163,7 +207,7 @@
 
     <div class="grid" id="adminApp" hidden>
       <div class="stack">
-        <section class="card">
+        <section class="card anchor-section" id="settingsSection">
           <div class="section">
             <div>
               <p class="eyebrow">Settings</p>
@@ -208,7 +252,7 @@
           </form>
         </section>
 
-        <section class="card">
+        <section class="card anchor-section" id="officialAdd">
           <div class="section">
             <div>
               <p class="eyebrow">Official Schedule</p>
@@ -240,7 +284,7 @@
       </div>
 
       <div class="stack">
-        <section class="card">
+        <section class="card anchor-section" id="officialEntries">
           <div class="section">
             <div>
               <p class="eyebrow">Official Schedule List</p>
@@ -256,7 +300,7 @@
           <p class="small" style="margin-top:12px">修正したい場合は一度削除して、正しい内容で追加し直してください。</p>
         </section>
 
-        <section class="card">
+        <section class="card anchor-section" id="participantEntries">
           <div class="section">
             <div>
               <p class="eyebrow">Participant Entries</p>

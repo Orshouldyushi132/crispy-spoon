@@ -12,9 +12,22 @@
     @font-face{font-family:"GenZenGothicKai";src:url("./assets/fonts/GenZenGothicKai.ttf") format("truetype");font-display:swap}
     :root{--bg:#05070b;--bg2:#0f141c;--bg3:#151d27;--card:rgba(17,21,28,.88);--card2:rgba(20,25,34,.96);--line:rgba(255,255,255,.08);--text:#f4f7fb;--sub:#96a2b3;--cyan:#8cd7ff;--mint:#63e6cf;--amber:#f3b14a;--green:#62e0c2;--red:#ff8894;--shadow:0 28px 70px rgba(0,0,0,.45)}
     *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
     body{margin:0;color:var(--text);font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;background:radial-gradient(circle at top left,rgba(140,215,255,.14),transparent 22%),radial-gradient(circle at top right,rgba(99,230,207,.1),transparent 18%),linear-gradient(160deg,var(--bg),var(--bg2) 56%,var(--bg3));min-height:100vh}
     a{color:inherit}
     .wrap{width:min(1180px,calc(100% - 28px));margin:24px auto 72px}
+    .site-header,.toc-card{margin-bottom:18px;padding:18px 22px;background:rgba(10,14,20,.82);border:1px solid rgba(255,255,255,.08);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:12px;z-index:30}
+    .site-brand{display:grid;gap:6px}
+    .site-brand strong{font-size:1.08rem;letter-spacing:.04em}
+    .site-brand span{color:var(--sub);font-size:.88rem}
+    .header-nav,.toc-grid{display:flex;flex-wrap:wrap;gap:10px}
+    .header-link,.toc-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);text-decoration:none;font-size:.86rem;font-weight:900}
+    .header-link:hover,.toc-link:hover{border-color:rgba(140,215,255,.22);color:var(--cyan)}
+    .toc-card{display:grid;gap:12px}
+    .toc-head{display:flex;justify-content:space-between;align-items:end;gap:12px}
+    .toc-head p{margin:0;color:var(--sub);font-size:.9rem;line-height:1.7}
+    .anchor-section{scroll-margin-top:132px}
     .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
     .hero{padding:32px;display:grid;grid-template-columns:1.06fr .94fr;gap:18px;overflow:hidden;position:relative}
     .hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 84% 18%,rgba(140,215,255,.12),transparent 22%),linear-gradient(120deg,rgba(255,255,255,.07),transparent 44%)}
@@ -66,7 +79,7 @@
     .controls{position:sticky;top:14px;z-index:12;margin:14px 0 10px;align-items:center;padding:12px;border-radius:22px;border:1px solid rgba(255,255,255,.06);background:rgba(8,12,18,.88);box-shadow:0 18px 36px rgba(0,0,0,.24);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
     .timetable-intro{display:grid;gap:10px;margin:8px 0 10px}
     .timetable-intro .note,.timetable-intro .mini-note{margin:0}
-    #timetable{scroll-margin-top:22px}
+    #timetable{scroll-margin-top:132px}
     .searchbox{flex:1 1 280px;min-width:220px}
     .searchbox input{min-height:44px}
     .selectbox{flex:0 0 188px;min-width:188px}
@@ -190,6 +203,10 @@
     @media (max-width:760px){
       body{padding-bottom:92px}
       .wrap{width:min(100% - 16px,100%);margin:12px auto 40px}
+      .site-header{position:static;padding:16px 18px}
+      .site-header,.toc-card{border-radius:22px}
+      .header-nav,.toc-grid{flex-direction:column}
+      .header-link,.toc-link{width:100%}
       .hero,.card{border-radius:22px}
       .hero,.card{padding:18px}
       .stats,.chips,.btns,.actions,.item-actions,.plan-list{flex-direction:column}
@@ -213,7 +230,42 @@
 </head>
 <body>
   <div class="wrap">
-    <section class="hero">
+    <header class="site-header">
+      <div class="site-brand">
+        <strong>米プレラ タイムテーブル</strong>
+        <span>公開ページの主要セクションへすぐ移動できます。</span>
+      </div>
+      <nav class="header-nav" aria-label="ページ内ナビゲーション">
+        <a class="header-link" href="#overview">概要</a>
+        <a class="header-link" href="#upcoming">直近予定</a>
+        <a class="header-link" href="#timetable">タイムテーブル</a>
+        <a class="header-link" href="#event-info">基本情報</a>
+        <a class="header-link" href="#participants">参加者向け</a>
+      </nav>
+    </header>
+
+    <section class="toc-card">
+      <div class="toc-head">
+        <div>
+          <p class="eyebrow" style="margin-bottom:8px">Contents</p>
+          <h2>目次</h2>
+        </div>
+        <p>見たい情報にそのまま飛べるようにしています。</p>
+      </div>
+      <nav class="toc-grid" aria-label="目次">
+        <a class="toc-link" href="#overview">企画概要</a>
+        <a class="toc-link" href="#primer">初見ガイド</a>
+        <a class="toc-link" href="#upcoming">まもなく始まる予定</a>
+        <a class="toc-link" href="#community">通知と感想共有</a>
+        <a class="toc-link" href="#timetable">当日の公開予定</a>
+        <a class="toc-link" href="#event-info">楽しむための基本情報</a>
+        <a class="toc-link" href="#rules">ルールとマナー</a>
+        <a class="toc-link" href="#glossary">用語と見方</a>
+        <a class="toc-link" href="#participants">参加者向け情報</a>
+      </nav>
+    </section>
+
+    <section class="hero anchor-section" id="overview">
       <div>
         <p class="eyebrow">Rice Premiere Rush</p>
         <h1>米プレラ<br><span id="heroDate">2026/08/18</span></h1>
@@ -239,7 +291,7 @@
       </div>
     </section>
 
-    <section class="card" style="margin-top:18px">
+    <section class="card anchor-section" id="primer" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Quick Primer</p>
@@ -267,7 +319,7 @@
     </section>
 
     <section class="top">
-      <article class="card">
+      <article class="card anchor-section" id="upcoming">
         <p class="eyebrow">Closest Schedule</p>
         <h2>まもなく始まる予定</h2>
         <p id="nextText">次回の参加動画を読み込み中</p>
@@ -290,7 +342,7 @@
           <button type="button" class="hero-link ghost is-disabled" id="nextShareBtn">この予定を共有</button>
         </div>
       </article>
-      <article class="card">
+      <article class="card anchor-section" id="community">
         <p class="eyebrow">Community</p>
         <h2>通知・チャット・感想共有</h2>
         <div class="guides" style="margin-top:14px">
@@ -315,7 +367,7 @@
       </article>
     </section>
 
-    <section class="card" id="timetable" style="margin-top:18px">
+    <section class="card anchor-section" id="timetable" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Timetable</p>
@@ -375,7 +427,7 @@
       <div class="timeline" id="timeline"><div class="empty">まだ公開予定はありません。</div></div>
     </section>
 
-    <section class="card" style="margin-top:18px">
+    <section class="card anchor-section" id="event-info" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Event Info</p>
@@ -426,7 +478,7 @@
       </div>
     </section>
 
-    <section class="card" style="margin-top:18px">
+    <section class="card anchor-section" id="rules" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Rules</p>
@@ -455,7 +507,7 @@
 
 
 
-    <section class="card" style="margin-top:18px">
+    <section class="card anchor-section" id="glossary" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Glossary</p>
@@ -498,7 +550,7 @@
       </div>
     </section>
 
-    <section class="card" style="margin-top:18px">
+    <section class="card anchor-section" id="participants" style="margin-top:18px">
       <div class="section">
         <div>
           <p class="eyebrow">Participant Info</p>
