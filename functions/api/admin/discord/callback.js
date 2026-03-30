@@ -1,5 +1,5 @@
 import { clearAdminSession, clearOauthState, readOauthState, writeAdminSession } from "../../../_lib/session.js";
-import { getDiscordConfigState } from "../../../_lib/admin-backend.js";
+import { getDiscordConfigState, syncSessionReviewAccess } from "../../../_lib/admin-backend.js";
 import { getRuntimeConfig } from "../../../_lib/runtime-config.js";
 
 function redirectResponse(location, headers = new Headers()) {
@@ -14,7 +14,7 @@ export const onRequestGet = async (context) => {
   const discordConfig = await getDiscordConfigState(context.env);
 
   if (!discordConfig.configured) {
-    return redirectResponse(`${redirectBase}?discord_error=${encodeURIComponent("Discord認証の設定が未完了です")}`);
+    return redirectResponse(`${redirectBase}?discord_error=${encodeURIComponent("Discord認証の設定がまだ足りません。")}`);
   }
 
   const code = requestUrl.searchParams.get("code") || "";
@@ -25,7 +25,7 @@ export const onRequestGet = async (context) => {
     const headers = new Headers();
     clearOauthState(headers);
     clearAdminSession(headers);
-    return redirectResponse(`${redirectBase}?discord_error=${encodeURIComponent("Discord認証の確認に失敗しました")}`, headers);
+    return redirectResponse(`${redirectBase}?discord_error=${encodeURIComponent("Discord認証の照合に失敗しました。もう一度お試しください。")}`, headers);
   }
 
   const redirectUri = config.DISCORD_REDIRECT_URI || `${requestUrl.origin}/api/admin/discord/callback`;
@@ -50,7 +50,7 @@ export const onRequestGet = async (context) => {
     }
 
     const tokenData = await tokenResponse.json();
-    const userResponse = await fetch("https://discord.com/api/users/@me", {
+    const userResponse = await fetch("https://discord.com/api/v10/users/@me", {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
       },
@@ -61,27 +61,28 @@ export const onRequestGet = async (context) => {
     }
 
     const user = await userResponse.json();
-    const headers = new Headers();
-
-    clearOauthState(headers);
-    clearAdminSession(headers);
-    await writeAdminSession(headers, context.env, {
+    const authorizedAt = new Date().toISOString();
+    const session = await syncSessionReviewAccess({
       discordUser: {
         id: user.id,
         username: user.username,
         global_name: user.global_name || "",
         avatar: user.avatar || "",
       },
-      reviewUnlocked: false,
-      authorizedAt: new Date().toISOString(),
-      unlockedAt: null,
-    });
+      discordAccessToken: tokenData.access_token,
+      authorizedAt,
+    }, context.env);
+
+    const headers = new Headers();
+    clearOauthState(headers);
+    clearAdminSession(headers);
+    await writeAdminSession(headers, context.env, session);
 
     return redirectResponse(`${redirectBase}?discord=connected`, headers);
   } catch {
     const headers = new Headers();
     clearOauthState(headers);
     clearAdminSession(headers);
-    return redirectResponse(`${redirectBase}?discord_error=${encodeURIComponent("Discord認証に失敗しました")}`, headers);
+    return redirectResponse(`${redirectBase}?discord_error=${encodeURIComponent("Discord認証に失敗しました。もう一度お試しください。")}`, headers);
   }
 };

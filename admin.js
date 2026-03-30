@@ -50,8 +50,6 @@ const els = {
   discordConnect: $("discordConnectBtn"),
   refreshSession: $("refreshSessionBtn"),
   signOut: $("signOutBtn"),
-  reviewPassword: $("reviewPassword"),
-  unlockReview: $("unlockReviewBtn"),
   discordAccountName: $("discordAccountName"),
   discordAccountMeta: $("discordAccountMeta"),
   reviewerIdentity: $("reviewerIdentity"),
@@ -98,7 +96,12 @@ const safeUrl = (value, allowEmpty = false) => {
   }
 };
 let sessionState = null;
-let sessionInfo = { discordConfigured: true, missingDiscordEnv: [] };
+let sessionInfo = {
+  discordConfigured: true,
+  missingDiscordEnv: [],
+  reviewRoleConfigured: false,
+  missingReviewEnv: [],
+};
 let appReady = false;
 let lastRefreshKey = "";
 let crewReadyKey = "";
@@ -119,6 +122,20 @@ function formatMissingDiscordEnv(list) {
   return Array.isArray(list) && list.length
     ? list.join(" / ")
     : "ADMIN_SESSION_SECRET / DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET";
+}
+
+function formatMissingReviewEnv(list) {
+  return Array.isArray(list) && list.length
+    ? list.join(" / ")
+    : "DISCORD_GUILD_ID / DISCORD_REVIEW_ROLE_IDS";
+}
+
+function getReviewAccess(session = sessionState) {
+  return session?.reviewAccess || {};
+}
+
+function hasReviewAccess(session = sessionState) {
+  return Boolean(getReviewAccess(session).hasRequiredRole);
 }
 
 function formatDate(value) {
@@ -335,7 +352,7 @@ function drawOfficial(list) {
   bindCardToggles(els.official);
   document.querySelectorAll("[data-odel]").forEach((button) => {
     button.addEventListener("click", async (event) => {
-      if (!sessionState?.reviewUnlocked) return;
+      if (!hasReviewAccess()) return;
       if (!confirm("この公式予定を削除する？")) return;
       try {
         await postJson("/official", { action: "delete", id: event.currentTarget.dataset.odel });
@@ -371,7 +388,7 @@ function drawEntries(list) {
   bindCardToggles(els.admin);
   document.querySelectorAll("[data-act]").forEach((button) => {
     button.addEventListener("click", async (event) => {
-      if (!sessionState?.reviewUnlocked) return;
+      if (!hasReviewAccess()) return;
       const { act, id } = event.currentTarget.dataset;
       const currentItem = items.find((item) => item.id === id) || null;
       try {
@@ -444,7 +461,7 @@ function drawOfficial(list) {
   bindCardToggles(els.official);
   document.querySelectorAll("[data-odel]").forEach((button) => {
     button.addEventListener("click", async (event) => {
-      if (!sessionState?.reviewUnlocked) return;
+      if (!hasReviewAccess()) return;
       if (!confirm("この公式予定を削除しますか？")) return;
       try {
         await postJson("/official", { action: "delete", id: event.currentTarget.dataset.odel });
@@ -482,7 +499,7 @@ function drawEntries(list) {
   bindCardToggles(els.admin);
   document.querySelectorAll("[data-act]").forEach((button) => {
     button.addEventListener("click", async (event) => {
-      if (!sessionState?.reviewUnlocked) return;
+      if (!hasReviewAccess()) return;
       const { act, id } = event.currentTarget.dataset;
       const currentItem = items.find((item) => item.id === id) || null;
       try {
@@ -514,14 +531,15 @@ function drawEntries(list) {
 function applySessionUi(data) {
   const session = data?.session || null;
   const linked = Boolean(session?.discordUser);
-  const unlocked = Boolean(session?.reviewUnlocked);
+  const unlocked = hasReviewAccess(session);
+  const reviewAccess = getReviewAccess(session);
   sessionInfo = {
     discordConfigured: Boolean(data?.discordConfigured),
     missingDiscordEnv: Array.isArray(data?.missingDiscordEnv) ? data.missingDiscordEnv.filter(Boolean) : [],
+    reviewRoleConfigured: Boolean(data?.reviewRoleConfigured),
+    missingReviewEnv: Array.isArray(data?.missingReviewEnv) ? data.missingReviewEnv.filter(Boolean) : [],
   };
   sessionState = session;
-  els.reviewPassword.disabled = !linked || unlocked;
-  els.unlockReview.disabled = !linked || unlocked;
   els.signOut.hidden = !linked;
   els.discordConnect.disabled = false;
   els.discordConnect.textContent = sessionInfo.discordConfigured ? "Discordで認証" : "Discord設定を確認";
@@ -539,11 +557,11 @@ function applySessionUi(data) {
   }
   if (!linked) {
     setAuthBadge("Discord未認証", "pending");
-    els.authHint.textContent = "まず Discord で認証してください。認証後にレビュー用パスワードが入力できます。";
-    els.authUser.textContent = "未認証のため、審査モードはまだ開いていません。";
+    els.authHint.textContent = "まず Discord で認証してください。認証後にロール確認を行います。";
+    els.authUser.textContent = "未認証のため、担当メモと審査画面はまだ開いていません。";
     els.discordAccountName.textContent = "未連携";
     els.discordAccountMeta.textContent = "Discord認証待ち";
-    els.reviewerIdentity.textContent = "Discord認証後に審査モードが開きます。";
+    els.reviewerIdentity.textContent = "Discord認証後にレビュー権限ロールを確認します。";
     els.crewSection.hidden = true;
     els.app.hidden = true;
     return;
@@ -552,16 +570,23 @@ function applySessionUi(data) {
   els.discordAccountName.textContent = accountName;
   els.discordAccountMeta.textContent = `@${session.discordUser.username} / ID: ${session.discordUser.id}`;
   els.authUser.textContent = `現在のDiscord連携: ${accountName} (@${session.discordUser.username})`;
-  els.reviewerIdentity.textContent = `現在の操作アカウント: ${accountName} (@${session.discordUser.username})${unlocked ? " / 審査モード有効" : " / パスワード待ち"}`;
   els.crewSection.hidden = false;
-  if (unlocked) {
-    setAuthBadge("審査モード中", "approved");
-    els.authHint.textContent = "Discord認証とパスワード確認が完了しています。承認・差し戻し・設定変更が使えます。";
-    els.reviewPassword.value = "";
+  if (!sessionInfo.reviewRoleConfigured) {
+    const missing = formatMissingReviewEnv(sessionInfo.missingReviewEnv);
+    setAuthBadge("ロール設定待ち", "rejected");
+    els.authHint.textContent = "Cloudflare 側でレビュー権限ロールの設定がまだ完了していません。";
+    els.authUser.textContent = `現在のDiscord連携: ${accountName} (@${session.discordUser.username}) / 不足設定: ${missing}`;
+    els.reviewerIdentity.textContent = `現在の操作アカウント: ${accountName} (@${session.discordUser.username}) / ロール設定待ち`;
+    els.app.hidden = true;
+  } else if (unlocked) {
+    setAuthBadge("レビュー権限あり", "approved");
+    els.authHint.textContent = "Discord のロール確認が完了しています。承認・差し戻し・設定変更が使えます。";
+    els.reviewerIdentity.textContent = `現在の操作アカウント: ${accountName} (@${session.discordUser.username}) / レビュー権限ロール確認済み`;
     els.app.hidden = false;
   } else {
-    setAuthBadge("Discord認証済み", "pending");
-    els.authHint.textContent = "Discord認証は完了しています。レビュー用パスワードを入力すると審査モードが開きます。";
+    setAuthBadge("閲覧のみ", "pending");
+    els.authHint.textContent = reviewAccess.message || "この Discord アカウントでは担当メモの閲覧のみ行えます。";
+    els.reviewerIdentity.textContent = `現在の操作アカウント: ${accountName} (@${session.discordUser.username}) / 閲覧のみ`;
     els.app.hidden = true;
   }
 }
@@ -573,16 +598,17 @@ async function syncCrew(force = false) {
     ownCrewAssignment = null;
     return;
   }
-  const crewKey = `${sessionState.discordUser.id}:${sessionState.reviewUnlocked ? sessionState.unlockedAt || "open" : "linked"}`;
+  const reviewAccess = getReviewAccess();
+  const crewKey = `${sessionState.discordUser.id}:${reviewAccess.checkedAt || sessionState.authorizedAt || "linked"}`;
   if (!force && crewKey === crewReadyKey) return;
   const snapshot = await api("/crew");
   ownCrewAssignment = snapshot.own || {};
   fillCrewForm(ownCrewAssignment);
   renderOwnCrewCard(ownCrewAssignment);
   renderCrewList(Array.isArray(snapshot.entries) ? snapshot.entries : []);
-  els.crewViewerHint.textContent = sessionState.reviewUnlocked
-    ? "Discord 認証済みメンバーの担当枠・曲数・使用名義を一覧で確認できます。"
-    : "Discord 認証だけで担当一覧を確認できます。承認や差し戻しなどの審査操作はレビュー用パスワード通過後に有効になります。";
+  els.crewViewerHint.textContent = hasReviewAccess()
+    ? "Discord 認証済みメンバーの担当枠・曲数・使用名義を一覧で確認できます。レビュー権限ロールがあるため、審査操作も利用できます。"
+    : "Discord 認証だけで担当一覧を確認できます。承認や差し戻しなどの審査操作はレビュー権限ロールを持つアカウントだけに有効です。";
   crewReadyKey = crewKey;
 }
 
@@ -599,14 +625,15 @@ async function syncSession(force = false) {
       setMsg(els.crewStatus, `担当情報の読み込みに失敗しました: ${error.message || error}`, "err");
     }
   }
-  if (sessionState?.reviewUnlocked) {
+  if (hasReviewAccess()) {
     await refresh(force);
   }
 }
 
 async function refresh(force = false) {
-  if (!sessionState?.reviewUnlocked) return;
-  const refreshKey = `${sessionState.discordUser.id}:${sessionState.unlockedAt || ""}`;
+  if (!hasReviewAccess()) return;
+  const reviewAccess = getReviewAccess();
+  const refreshKey = `${sessionState.discordUser.id}:${reviewAccess.checkedAt || sessionState.authorizedAt || ""}`;
   if (!force && refreshKey === lastRefreshKey && appReady) return;
   const snapshot = await api("/data");
   fillSettings(snapshot.settings || DEF);
@@ -623,7 +650,7 @@ function consumeQueryNotice() {
   const ok = url.searchParams.get("discord");
   const error = url.searchParams.get("discord_error");
   if (ok === "connected") {
-    setMsg(els.authStatus, "Discord認証が完了しました。続けてパスワードを入力してください。", "ok");
+    setMsg(els.authStatus, "Discord認証が完了しました。レビュー権限ロールを確認しています。", "ok");
   }
   if (error) {
     setMsg(els.authStatus, decodeURIComponent(error), "err");
@@ -641,26 +668,6 @@ els.discordConnect.addEventListener("click", () => {
 
 els.refreshSession.addEventListener("click", () => {
   syncSession(true).catch((error) => setMsg(els.authStatus, `状態確認に失敗しました: ${error.message || error}`, "err"));
-});
-
-els.unlockReview.addEventListener("click", async () => {
-  if (!sessionState?.discordUser) {
-    setMsg(els.authStatus, "先に Discord で認証してください。", "err");
-    return;
-  }
-  const password = String(els.reviewPassword.value || "");
-  if (!password) {
-    setMsg(els.authStatus, "パスワードを入力してください。", "err");
-    return;
-  }
-  try {
-    const result = await postJson("/verify-password", { password });
-    sessionState = result.session || sessionState;
-    setMsg(els.authStatus, "審査モードを開きました。", "ok");
-    await syncSession(true);
-  } catch (error) {
-    setMsg(els.authStatus, `解錠に失敗しました: ${error.message || error}`, "err");
-  }
 });
 
 els.crewForm?.addEventListener("submit", async (event) => {
@@ -712,7 +719,6 @@ els.signOut.addEventListener("click", async () => {
     ownCrewAssignment = null;
     lastRefreshKey = "";
     crewReadyKey = "";
-    els.reviewPassword.value = "";
     els.crewSection.hidden = true;
     fillCrewForm();
     renderCrewList([]);
@@ -726,7 +732,7 @@ els.signOut.addEventListener("click", async () => {
 
 els.setForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!sessionState?.reviewUnlocked) return;
+  if (!hasReviewAccess()) return;
   const payload = {
     event_date: String($("eventDate").value || "").trim(),
     official_name: String($("officialName").value || "").trim(),
@@ -748,7 +754,7 @@ els.setForm.addEventListener("submit", async (event) => {
 
 els.offForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!sessionState?.reviewUnlocked) return;
+  if (!hasReviewAccess()) return;
   const payload = {
     action: "add",
     id: uid(),

@@ -133,7 +133,7 @@
     <div class="admin-gate-card">
       <p class="eyebrow">Admin Gate</p>
       <h1 style="font-size:clamp(2rem,4vw,3rem);margin-bottom:10px">管理ページへ入る</h1>
-      <p class="lead">管理ページに入る前に共通パスワードを入力してください。通過後に Discord 認証と審査用パスワード確認へ進めます。</p>
+      <p class="lead">管理ページに入る前に共通パスワードを入力してください。通過後に Discord 認証とレビュー権限ロール確認へ進めます。</p>
       <form id="adminGateForm">
         <label for="adminGatePassword">共通パスワード</label>
         <input id="adminGatePassword" type="password" autocomplete="current-password" placeholder="パスワードを入力">
@@ -184,10 +184,10 @@
       <div>
         <p class="eyebrow">Admin Console</p>
         <h1>Discord認証で、<br>運営管理をひらく。</h1>
-        <p class="lead">Discord認証のあと、レビュー用パスワードを通すと審査と設定変更が開きます。現在ログイン中の Discord アカウントもこのページで確認できます。</p>
+        <p class="lead">Discord認証のあと、対象ロールを持つアカウントだけ審査と設定変更が開きます。現在ログイン中の Discord アカウントもこのページで確認できます。</p>
         <div class="chips">
           <span class="chip">Discord認証</span>
-          <span class="chip">レビュー解錠</span>
+          <span class="chip">ロール判定</span>
           <span class="chip">掲載操作</span>
         </div>
         <div id="pageStatus" class="status"></div>
@@ -207,26 +207,21 @@
       <div class="section">
         <div>
           <p class="eyebrow">Discord Auth</p>
-          <h2>Discord認証とレビュー解錠</h2>
+          <h2>Discord認証とロール確認</h2>
         </div>
       </div>
       <div class="auth-grid">
         <div class="side">
-          <p class="small">先に Discord で認証すると、レビュー用パスワード欄が使えるようになります。パスワードが通ると、承認・差し戻し・削除と設定変更が開きます。</p>
+          <p class="small">先に Discord で認証すると、そのアカウントがレビュー権限ロールを持っているかを確認します。ロールが一致した場合だけ、承認・差し戻し・削除と設定変更が開きます。</p>
           <div class="btns" style="margin-top:16px">
             <button class="primary" type="button" id="discordConnectBtn">Discordで認証</button>
             <button class="ghost" type="button" id="refreshSessionBtn">状態を再確認</button>
-          </div>
-          <label for="reviewPassword">レビュー用パスワード</label>
-          <input id="reviewPassword" name="reviewPassword" type="password" autocomplete="current-password" placeholder="Discord認証後に入力できます" disabled>
-          <div class="btns" style="margin-top:14px">
-            <button class="approve" type="button" id="unlockReviewBtn" disabled>審査モードを開く</button>
             <button class="delete" type="button" id="signOutBtn" hidden>Discord連携を解除</button>
           </div>
           <div id="authStatus" class="status"></div>
           <ul class="auth-list">
-            <li>Discord認証前は、審査モードは開きません。</li>
-            <li>レビュー用パスワードは Discord 認証後にだけ入力できます。</li>
+            <li>Discord認証前は、担当メモも審査画面も開きません。</li>
+            <li>レビュー権限は Discord ロールで判定します。</li>
             <li>承認操作の近くに、現在ログイン中の Discord アカウントを表示します。</li>
           </ul>
         </div>
@@ -313,7 +308,7 @@
         </div>
         <aside class="side">
           <p class="eyebrow">Crew Board</p>
-          <p class="small" id="crewViewerHint">Discord 認証後に自分の担当情報を保存でき、担当一覧もここで確認できます。審査操作はレビュー用パスワード通過後に有効になります。</p>
+          <p class="small" id="crewViewerHint">Discord 認証後に自分の担当情報を保存でき、担当一覧もここで確認できます。審査操作はレビュー権限ロールを持つアカウントにだけ有効になります。</p>
           <div id="crewList" class="crew-list">
             <div class="crew-item"><span class="small">まだ担当情報はありません。</span></div>
           </div>
@@ -423,7 +418,7 @@
               <h2>参加登録一覧</h2>
             </div>
           </div>
-          <p class="small" id="reviewerIdentity" style="margin:0 0 14px">Discord認証とレビュー解錠が終わると、ここに現在の操作アカウントが表示されます。</p>
+          <p class="small" id="reviewerIdentity" style="margin:0 0 14px">Discord認証とロール確認が終わると、ここに現在の操作アカウントが表示されます。</p>
           <div class="table stacked-table">
             <table class="admin-table">
               <thead><tr><th>状態</th><th>枠</th><th>親</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">差し戻し理由</th><th class="action-col">操作</th></tr></thead>
@@ -435,6 +430,6 @@
     </div>
   </div>
 
-  <script src="./admin-gate.js?v=6"></script>
+  <script src="./admin-gate.js?v=7"></script>
 </body>
 </html>

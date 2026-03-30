@@ -52,9 +52,14 @@ export async function getDiscordConfigState(env) {
   if (!config.ADMIN_SESSION_SECRET) missing.push("ADMIN_SESSION_SECRET");
   if (!config.DISCORD_CLIENT_ID) missing.push("DISCORD_CLIENT_ID");
   if (!config.DISCORD_CLIENT_SECRET) missing.push("DISCORD_CLIENT_SECRET");
+  const reviewConfig = getDiscordReviewConfig(config);
   return {
     configured: missing.length === 0,
     missing,
+    reviewConfigured: reviewConfig.configured,
+    missingReview: reviewConfig.missing,
+    reviewGuildId: reviewConfig.guildId || "",
+    reviewRoleIds: reviewConfig.roleIds,
   };
 }
 
@@ -65,6 +70,161 @@ export async function isDiscordConfigured(env) {
 export async function isAdminApiConfigured(env) {
   const config = await getRuntimeConfig(env);
   return Boolean((await isDiscordConfigured(env)) && config.SUPABASE_URL && config.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function parseSnowflakeList(value) {
+  return [...new Set(
+    String(value || "")
+      .split(/[,\s]+/)
+      .map((item) => item.trim())
+      .filter((item) => /^\d{5,30}$/.test(item)),
+  )];
+}
+
+function getDiscordReviewConfig(config) {
+  const guildId = String(config.DISCORD_GUILD_ID || "").trim();
+  const roleIds = parseSnowflakeList(config.DISCORD_REVIEW_ROLE_IDS);
+  const missing = [];
+  if (!guildId) missing.push("DISCORD_GUILD_ID");
+  if (!roleIds.length) missing.push("DISCORD_REVIEW_ROLE_IDS");
+  return {
+    configured: missing.length === 0,
+    missing,
+    guildId,
+    roleIds,
+  };
+}
+
+function buildReviewAccessBase(reviewConfig) {
+  return {
+    source: "discord_role",
+    configured: Boolean(reviewConfig.configured),
+    missing: [...(reviewConfig.missing || [])],
+    guildId: reviewConfig.guildId || "",
+    requiredRoleIds: [...(reviewConfig.roleIds || [])],
+    matchedRoleIds: [],
+    hasRequiredRole: false,
+    checkedAt: new Date().toISOString(),
+    reason: "unknown",
+    message: "",
+  };
+}
+
+async function fetchDiscordMemberRoles(accessToken, guildId) {
+  const response = await fetch(`https://discord.com/api/v10/users/@me/guilds/${guildId}/member`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 404) {
+    return {
+      ok: false,
+      reason: "not_in_guild",
+      message: "対象の Discord サーバーに参加しているアカウントで認証してください。",
+      roleIds: [],
+    };
+  }
+  if (response.status === 401) {
+    return {
+      ok: false,
+      reason: "token_expired",
+      message: "Discord セッションの期限が切れています。もう一度認証してください。",
+      roleIds: [],
+    };
+  }
+  if (response.status === 403) {
+    return {
+      ok: false,
+      reason: "scope_denied",
+      message: "Discord のメンバー情報を取得できませんでした。もう一度認証してください。",
+      roleIds: [],
+    };
+  }
+  if (!response.ok) {
+    throw new HttpError(502, "Discord のロール確認に失敗しました。時間を置いてもう一度お試しください。");
+  }
+
+  const payload = await response.json().catch(() => ({}));
+  return {
+    ok: true,
+    reason: "ok",
+    message: "",
+    roleIds: Array.isArray(payload?.roles) ? payload.roles.map((roleId) => String(roleId)) : [],
+  };
+}
+
+export async function syncSessionReviewAccess(session, env, options = {}) {
+  if (!session?.discordUser) return session;
+
+  const config = await getRuntimeConfig(env);
+  const reviewConfig = getDiscordReviewConfig(config);
+  const base = buildReviewAccessBase(reviewConfig);
+  const accessToken = String(session.discordAccessToken || "").trim();
+
+  if (!reviewConfig.configured) {
+    return {
+      ...session,
+      reviewAccess: {
+        ...base,
+        reason: "config_missing",
+        message: "レビュー権限の Discord ロール設定が未完了です。",
+      },
+    };
+  }
+
+  if (!accessToken) {
+    return {
+      ...session,
+      reviewAccess: {
+        ...base,
+        reason: "token_missing",
+        message: "Discord セッションを更新するため、もう一度認証してください。",
+      },
+    };
+  }
+
+  try {
+    const member = await fetchDiscordMemberRoles(accessToken, reviewConfig.guildId);
+    if (!member.ok) {
+      return {
+        ...session,
+        reviewAccess: {
+          ...base,
+          reason: member.reason,
+          message: member.message,
+        },
+      };
+    }
+
+    const matchedRoleIds = reviewConfig.roleIds.filter((roleId) => member.roleIds.includes(roleId));
+    return {
+      ...session,
+      reviewAccess: {
+        ...base,
+        matchedRoleIds,
+        hasRequiredRole: matchedRoleIds.length > 0,
+        reason: matchedRoleIds.length ? "granted" : "missing_role",
+        message: matchedRoleIds.length
+          ? "レビュー権限ロールを確認しました。"
+          : "この Discord アカウントにはレビュー権限ロールが付与されていません。",
+      },
+    };
+  } catch (error) {
+    if (options.throwOnCheckFailure) {
+      throw error instanceof HttpError
+        ? error
+        : new HttpError(502, "Discord のロール確認に失敗しました。時間を置いてもう一度お試しください。");
+    }
+    return {
+      ...session,
+      reviewAccess: {
+        ...base,
+        reason: "check_failed",
+        message: "Discord のロール確認に失敗しました。状態を再確認してください。",
+      },
+    };
+  }
 }
 
 function safeUrl(value, allowEmpty = false) {
@@ -159,9 +319,12 @@ async function supabaseRequest(env, path, init = {}) {
 }
 
 export async function requireUnlockedSession(request, env) {
-  const session = await requireLinkedSession(request, env);
-  if (!session.reviewUnlocked) {
-    throw new HttpError(403, "Review password verification is required.");
+  const linkedSession = await requireLinkedSession(request, env);
+  const session = await syncSessionReviewAccess(linkedSession, env, { throwOnCheckFailure: true });
+  const reviewAccess = session.reviewAccess || {};
+  if (!reviewAccess.hasRequiredRole) {
+    const status = reviewAccess.reason === "config_missing" ? 500 : 403;
+    throw new HttpError(status, reviewAccess.message || "レビュー権限ロールが必要です。");
   }
   return session;
 }
@@ -176,11 +339,24 @@ export async function requireLinkedSession(request, env) {
 
 export function publicSession(session) {
   if (!session?.discordUser) return null;
+  const reviewAccess = session.reviewAccess || {
+    source: "discord_role",
+    configured: false,
+    missing: [],
+    guildId: "",
+    requiredRoleIds: [],
+    matchedRoleIds: [],
+    hasRequiredRole: false,
+    checkedAt: null,
+    reason: "unknown",
+    message: "",
+  };
   return {
     discordUser: session.discordUser,
-    reviewUnlocked: Boolean(session.reviewUnlocked),
+    reviewUnlocked: Boolean(reviewAccess.hasRequiredRole),
+    reviewAccess,
     authorizedAt: session.authorizedAt || null,
-    unlockedAt: session.unlockedAt || null,
+    unlockedAt: reviewAccess.checkedAt || null,
   };
 }
 

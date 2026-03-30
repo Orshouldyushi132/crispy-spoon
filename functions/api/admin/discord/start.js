@@ -22,7 +22,7 @@ export const onRequestGet = async (context) => {
   authorizeUrl.search = new URLSearchParams({
     response_type: "code",
     client_id: config.DISCORD_CLIENT_ID,
-    scope: "identify",
+    scope: "identify guilds.members.read",
     redirect_uri: redirectUri,
     state,
     prompt: "consent",
