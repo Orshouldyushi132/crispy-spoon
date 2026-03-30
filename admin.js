@@ -22,6 +22,16 @@ const els = {
   crewSection: $("crewSection"),
   crewForm: $("crewForm"),
   crewStatus: $("crewStatus"),
+  crewCurrentCard: $("crewCurrentCard"),
+  crewCurrentState: $("crewCurrentState"),
+  crewCurrentUpdated: $("crewCurrentUpdated"),
+  crewCurrentName: $("crewCurrentName"),
+  crewCurrentLanes: $("crewCurrentLanes"),
+  crewCurrentSongs: $("crewCurrentSongs"),
+  crewCurrentNote: $("crewCurrentNote"),
+  crewEditBtn: $("crewEditBtn"),
+  crewResetBtn: $("crewResetBtn"),
+  crewSubmitBtn: $("crewSubmitBtn"),
   crewCreditName: $("crewCreditName"),
   crewAssignedLanes: $("crewAssignedLanes"),
   crewSongCount: $("crewSongCount"),
@@ -75,6 +85,7 @@ let sessionInfo = { discordConfigured: true, missingDiscordEnv: [] };
 let appReady = false;
 let lastRefreshKey = "";
 let crewReadyKey = "";
+let ownCrewAssignment = null;
 
 function setMsg(el, message, type = "") {
   if (!el) return;
@@ -97,6 +108,17 @@ function formatDate(value) {
   if (!value) return "未設定";
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? "未設定" : new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", weekday: "short" }).format(date);
+}
+
+function formatDateTime(value) {
+  if (!value) return "未設定";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "未設定" : new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function statusBadge(status) {
@@ -150,11 +172,36 @@ function drawSummary(entries, official, settings) {
   els.sumOfficial.textContent = String(official.length);
 }
 
+function hasCrewAssignment(assignment = {}) {
+  return Boolean(
+    String(assignment.credit_name || "").trim()
+    || String(assignment.assigned_lanes || "").trim()
+    || String(assignment.note || "").trim()
+    || assignment.updated_at,
+  );
+}
+
 function fillCrewForm(assignment = {}) {
   els.crewCreditName.value = String(assignment.credit_name || "");
   els.crewAssignedLanes.value = String(assignment.assigned_lanes || "");
   els.crewSongCount.value = String(assignment.song_count || 1);
   els.crewNote.value = String(assignment.note || "");
+  els.crewSubmitBtn.textContent = hasCrewAssignment(assignment) ? "担当情報を更新" : "担当情報を登録";
+}
+
+function renderOwnCrewCard(assignment = {}) {
+  const exists = hasCrewAssignment(assignment);
+  els.crewCurrentState.textContent = exists ? "登録済み" : "未登録";
+  els.crewCurrentState.className = `badge ${exists ? "approved" : "pending"}`;
+  els.crewCurrentUpdated.textContent = exists
+    ? `${formatDateTime(assignment.updated_at)} 時点の内容です。変更したいときは下のフォームから更新できます。`
+    : "まだ担当情報は保存されていません。下のフォームから登録できます。";
+  els.crewCurrentName.textContent = String(assignment.credit_name || "未設定");
+  els.crewCurrentLanes.textContent = String(assignment.assigned_lanes || "未設定");
+  els.crewCurrentSongs.textContent = `${clampInt(assignment.song_count, 1, 99, 1)}曲`;
+  els.crewCurrentNote.textContent = String(assignment.note || "未設定");
+  els.crewEditBtn.disabled = !exists;
+  els.crewResetBtn.disabled = !exists;
 }
 
 function renderCrewList(entries = []) {
@@ -448,12 +495,15 @@ async function syncCrew(force = false) {
   if (!sessionState?.discordUser) {
     els.crewSection.hidden = true;
     crewReadyKey = "";
+    ownCrewAssignment = null;
     return;
   }
   const crewKey = `${sessionState.discordUser.id}:${sessionState.reviewUnlocked ? sessionState.unlockedAt || "open" : "linked"}`;
   if (!force && crewKey === crewReadyKey) return;
   const snapshot = await api("/crew");
-  fillCrewForm(snapshot.own || {});
+  ownCrewAssignment = snapshot.own || {};
+  fillCrewForm(ownCrewAssignment);
+  renderOwnCrewCard(ownCrewAssignment);
   renderCrewList(Array.isArray(snapshot.entries) ? snapshot.entries : []);
   els.crewViewerHint.textContent = sessionState.reviewUnlocked
     ? "Discord 認証済みメンバーの担当枠・曲数・使用名義を一覧で確認できます。"
@@ -544,6 +594,7 @@ els.crewForm?.addEventListener("submit", async (event) => {
     setMsg(els.crewStatus, "先に Discord で認証してください。", "err");
     return;
   }
+  const isEditing = hasCrewAssignment(ownCrewAssignment || {});
   const payload = {
     credit_name: String(els.crewCreditName.value || "").trim(),
     assigned_lanes: String(els.crewAssignedLanes.value || "").trim(),
@@ -552,11 +603,25 @@ els.crewForm?.addEventListener("submit", async (event) => {
   };
   try {
     await postJson("/crew", payload);
-    setMsg(els.crewStatus, "担当情報を保存しました。", "ok");
+    setMsg(els.crewStatus, isEditing ? "担当情報を更新しました。" : "担当情報を登録しました。", "ok");
     await syncCrew(true);
   } catch (error) {
     setMsg(els.crewStatus, `担当情報の保存に失敗しました: ${error.message || error}`, "err");
   }
+});
+
+els.crewEditBtn?.addEventListener("click", () => {
+  if (!hasCrewAssignment(ownCrewAssignment || {})) return;
+  fillCrewForm(ownCrewAssignment || {});
+  setMsg(els.crewStatus, "現在の担当情報をフォームに読み込みました。内容を直して更新できます。", "ok");
+  els.crewCreditName.focus();
+});
+
+els.crewResetBtn?.addEventListener("click", () => {
+  fillCrewForm(ownCrewAssignment || {});
+  setMsg(els.crewStatus, hasCrewAssignment(ownCrewAssignment || {})
+    ? "入力内容を保存済みの担当情報に戻しました。"
+    : "入力内容を初期状態に戻しました。", "ok");
 });
 
 els.signOut.addEventListener("click", async () => {
@@ -564,6 +629,7 @@ els.signOut.addEventListener("click", async () => {
     await postJson("/logout", {});
     sessionState = null;
     appReady = false;
+    ownCrewAssignment = null;
     lastRefreshKey = "";
     crewReadyKey = "";
     els.reviewPassword.value = "";

@@ -107,6 +107,12 @@
     .crew-item-meta{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
     .crew-item-meta span,.crew-item-note{display:block;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
     .crew-item-note{margin-top:10px;color:var(--sub);line-height:1.75}
+    .crew-current{margin:14px 0 0;padding:16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+    .crew-current-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:12px}
+    .crew-current-item{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+    .crew-current-item strong{display:block;margin-bottom:4px;font-size:.72rem;letter-spacing:.08em;color:var(--sub);text-transform:uppercase}
+    .crew-current-item span{display:block;font-size:.98rem;font-weight:800;line-height:1.5;word-break:break-word}
+    .crew-current-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
     .badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
@@ -243,6 +249,38 @@
       <div class="auth-grid">
         <div class="side">
           <p class="small">Discord 認証が済んでいれば、自分が担当する枠・曲数・使用名義をここで登録できます。審査パス通過後の運営メンバーには一覧も表示されます。</p>
+          <div class="crew-current" id="crewCurrentCard">
+            <div class="section" style="margin-bottom:0">
+              <div>
+                <p class="eyebrow" style="margin-bottom:6px">Current</p>
+                <h3 style="margin:0;font-size:1.16rem">現在の担当情報</h3>
+              </div>
+              <span class="badge pending" id="crewCurrentState">未登録</span>
+            </div>
+            <p class="small" id="crewCurrentUpdated" style="margin-top:10px">まだ担当情報は保存されていません。下のフォームから登録できます。</p>
+            <div class="crew-current-grid">
+              <div class="crew-current-item">
+                <strong>使用名義</strong>
+                <span id="crewCurrentName">未設定</span>
+              </div>
+              <div class="crew-current-item">
+                <strong>担当枠</strong>
+                <span id="crewCurrentLanes">未設定</span>
+              </div>
+              <div class="crew-current-item">
+                <strong>担当曲数</strong>
+                <span id="crewCurrentSongs">1曲</span>
+              </div>
+            </div>
+            <div class="crew-current-item" style="margin-top:10px">
+              <strong>補足</strong>
+              <span id="crewCurrentNote">未設定</span>
+            </div>
+            <div class="crew-current-actions">
+              <button class="ghost" type="button" id="crewEditBtn">この内容を編集</button>
+              <button class="ghost" type="button" id="crewResetBtn">入力を戻す</button>
+            </div>
+          </div>
           <form id="crewForm" style="margin-top:16px">
             <label for="crewCreditName">使用名義</label>
             <input id="crewCreditName" name="crewCreditName" maxlength="80" placeholder="例: 米米 / subeteumusidesu" required>
@@ -259,7 +297,7 @@
             <label for="crewNote">補足</label>
             <textarea id="crewNote" name="crewNote" maxlength="300" placeholder="合作担当 / サムネ準備中 / 代理投稿 など"></textarea>
             <div class="btns">
-              <button class="primary" type="submit">担当情報を保存</button>
+              <button class="primary" type="submit" id="crewSubmitBtn">担当情報を登録</button>
             </div>
             <div id="crewStatus" class="status"></div>
           </form>
