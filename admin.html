@@ -45,12 +45,24 @@
     .table-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
     .table-actions button{min-height:40px;padding:10px 14px}
     .empty{padding:24px;color:var(--sub);text-align:center}
+    .stacked-table{overflow:visible;border:none;background:transparent}
+    .stacked-table table{min-width:0;width:100%;display:block}
+    .stacked-table thead{display:none}
+    .stacked-table tbody{display:grid;gap:12px}
+    .stacked-table tr{display:block;padding:16px;border-radius:20px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}
+    .stacked-table td{display:block;padding:0 0 12px;border-bottom:none;min-width:0}
+    .stacked-table td:last-child{padding-bottom:0}
+    .stacked-table td:before{content:attr(data-label);display:block;margin-bottom:5px;color:var(--sub);font-size:.78rem;font-weight:900;letter-spacing:.08em}
+    .stacked-table .song{margin-bottom:0}
+    .stacked-table .table-actions{flex-direction:column;align-items:stretch}
+    .stacked-table .table-actions button{width:100%}
+    .stacked-table .empty{display:block;padding:18px 12px;border-radius:16px}
     .badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
     .badge.rejected{background:rgba(255,136,148,.12);color:var(--red)}
     @media (max-width:1020px){.hero,.grid,.auth-grid{grid-template-columns:1fr}}
-    @media (max-width:760px){.wrap{width:min(100% - 16px,100%);margin:12px auto 40px}.card{padding:18px;border-radius:22px}.stats,.btns,.chips,.table-actions{flex-direction:column}.btns button{width:100%}.row{grid-template-columns:1fr}input,textarea{font-size:16px}.table{overflow:visible;border:none;background:transparent}table{min-width:0;width:100%;display:block}thead{display:none}tbody{display:block}tr{display:block;margin-bottom:12px;padding:12px;border-radius:18px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}td{display:block;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.08);font-size:.93rem}td:last-child{border-bottom:none}td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--sub);font-size:.78rem;font-weight:900}.empty{display:block;padding:18px 12px;border-radius:16px}}
+    @media (max-width:760px){.wrap{width:min(100% - 16px,100%);margin:12px auto 40px}.card{padding:18px;border-radius:22px}.stats,.btns,.chips,.table-actions{flex-direction:column}.btns button{width:100%}.row{grid-template-columns:1fr}input,textarea{font-size:16px}.table{overflow:visible;border:none;background:transparent}table{min-width:0;width:100%;display:block}thead{display:none}tbody{display:grid;gap:12px}tr{display:block;margin-bottom:0;padding:12px;border-radius:18px;background:var(--card2);border:1px solid rgba(255,255,255,.08)}td{display:block;padding:0 0 10px;border-bottom:none;font-size:.93rem}td:last-child{padding-bottom:0}td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--sub);font-size:.78rem;font-weight:900}.empty{display:block;padding:18px 12px;border-radius:16px}}
   </style>
 </head>
 <body>
@@ -207,7 +219,7 @@
               <h2>登録済みの公式予定</h2>
             </div>
           </div>
-          <div class="table">
+          <div class="table stacked-table">
             <table class="official-table">
               <thead><tr><th>時間</th><th class="title-col">タイトル</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="action-col">操作</th></tr></thead>
               <tbody id="officialBody"><tr><td colspan="5" class="empty">まだ公式予定はありません。</td></tr></tbody>
@@ -224,7 +236,7 @@
             </div>
           </div>
           <p class="small" id="reviewerIdentity" style="margin:0 0 14px">Discord認証とレビュー解錠が終わると、ここに現在の操作アカウントが表示されます。</p>
-          <div class="table">
+          <div class="table stacked-table">
             <table class="admin-table">
               <thead><tr><th>状態</th><th>レーン</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">差し戻し理由</th><th class="action-col">操作</th></tr></thead>
               <tbody id="adminBody"><tr><td colspan="9" class="empty">まだ参加登録はありません。</td></tr></tbody>
