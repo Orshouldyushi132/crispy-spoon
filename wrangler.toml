@@ -22,37 +22,37 @@ DISCORD_REDIRECT_URI = "https://okome-pr.orshouldempty.workers.dev/api/admin/dis
 
 [[secrets_store_secrets]]
 binding = "ADMIN_SESSION_SECRET"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "ADMIN_SESSION_SECRET"
 
 [[secrets_store_secrets]]
 binding = "ADMIN_GATE_PASSWORD"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "ADMIN_GATE_PASSWORD"
 
 [[secrets_store_secrets]]
 binding = "ADMIN_REVIEW_PASSWORD"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "ADMIN_REVIEW_PASSWORD"
 
 [[secrets_store_secrets]]
 binding = "DISCORD_CLIENT_ID"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "DISCORD_CLIENT_ID"
 
 [[secrets_store_secrets]]
 binding = "DISCORD_CLIENT_SECRET"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "DISCORD_CLIENT_SECRET"
 
 [[secrets_store_secrets]]
 binding = "SUPABASE_SERVICE_ROLE_KEY"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "SUPABASE_SERVICE_ROLE_KEY"
 
 [[secrets_store_secrets]]
 binding = "APPLICANT_LOOKUP_SECRET"
-store_id = "<your-secrets-store-id>"
+store_id = "baef96de25a647d29def391192f7a929"
 secret_name = "APPLICANT_LOOKUP_SECRET"
 
 # routes = [
