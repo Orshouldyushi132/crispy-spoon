@@ -163,6 +163,21 @@ export async function getPublicSnapshot(env) {
   };
 }
 
+export async function getPublicEntryStatuses(env, ids) {
+  const cleanIds = [...new Set((Array.isArray(ids) ? ids : []).map((value) => String(value || "").trim()).filter((value) => /^[A-Za-z0-9-]{8,120}$/.test(value)))].slice(0, 24);
+  if (!cleanIds.length) {
+    return { ok: true, entries: [] };
+  }
+  const rows = await supabaseRequest(
+    env,
+    `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&id=in.(${cleanIds.map((value) => encodeURIComponent(value)).join(",")})&order=created_at.desc`,
+  );
+  return {
+    ok: true,
+    entries: rows || [],
+  };
+}
+
 export async function getAdminSnapshot(env) {
   const [entries, official, settingsRows] = await Promise.all([
     supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&order=created_at.asc`),

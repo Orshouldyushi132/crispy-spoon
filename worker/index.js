@@ -7,6 +7,7 @@ import * as adminSettings from "../functions/api/admin/settings.js";
 import * as adminVerifyPassword from "../functions/api/admin/verify-password.js";
 import * as publicData from "../functions/api/public/data.js";
 import * as publicEntries from "../functions/api/public/entries.js";
+import * as publicStatuses from "../functions/api/public/statuses.js";
 import * as discordStart from "../functions/api/admin/discord/start.js";
 import * as discordCallback from "../functions/api/admin/discord/callback.js";
 
@@ -20,6 +21,7 @@ const ROUTES = [
   { path: "/api/admin/verify-password", POST: adminVerifyPassword.onRequestPost },
   { path: "/api/public/data", GET: publicData.onRequestGet },
   { path: "/api/public/entries", POST: publicEntries.onRequestPost },
+  { path: "/api/public/statuses", POST: publicStatuses.onRequestPost },
   { path: "/api/admin/discord/start", GET: discordStart.onRequestGet },
   { path: "/api/admin/discord/callback", GET: discordCallback.onRequestGet },
 ];
