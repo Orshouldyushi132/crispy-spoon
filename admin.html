@@ -12,6 +12,9 @@
     @font-face{font-family:"GenZenGothicKai";src:url("./assets/fonts/GenZenGothicKai.ttf") format("truetype");font-display:swap}
     :root{--bg:#05070b;--bg2:#0f141c;--bg3:#151d27;--card:rgba(17,21,28,.88);--card2:rgba(20,25,34,.96);--line:rgba(255,255,255,.08);--text:#f4f7fb;--sub:#96a2b3;--cyan:#8cd7ff;--mint:#63e6cf;--amber:#f3b14a;--green:#62e0c2;--red:#ff8894;--shadow:0 28px 70px rgba(0,0,0,.45)}
     *{box-sizing:border-box}[hidden]{display:none!important}html{scroll-behavior:smooth}body{margin:0;color:var(--text);font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;background:radial-gradient(circle at top left,rgba(140,215,255,.14),transparent 22%),radial-gradient(circle at top right,rgba(99,230,207,.1),transparent 18%),linear-gradient(160deg,var(--bg),var(--bg2) 56%,var(--bg3));min-height:100vh}a{color:inherit}.wrap{width:min(1180px,calc(100% - 28px));margin:24px auto 72px}
+    .admin-gate{position:fixed;inset:0;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at top,rgba(140,215,255,.14),transparent 24%),rgba(5,7,11,.96);z-index:120}
+    .admin-gate-card{width:min(520px,100%);padding:28px;background:rgba(12,16,23,.92);border:1px solid rgba(255,255,255,.08);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+    .admin-gate-card form{display:grid;gap:14px}
     .site-header,.toc-card{margin-bottom:18px;padding:18px 22px;background:rgba(10,14,20,.82);border:1px solid rgba(255,255,255,.08);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
     .site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:12px;z-index:30}
     .site-brand{display:grid;gap:6px}
@@ -97,6 +100,13 @@
     .stack-card-details{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
     .stack-detail-label{margin:0 0 4px;color:var(--sub);font-size:.74rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
     .stack-detail-value{margin:0;color:var(--text);line-height:1.7;word-break:break-word}
+    .crew-list{display:grid;gap:12px;margin-top:14px}
+    .crew-item{padding:16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+    .crew-item-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .crew-item-head strong{display:block;font-size:1rem}
+    .crew-item-meta{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+    .crew-item-meta span,.crew-item-note{display:block;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+    .crew-item-note{margin-top:10px;color:var(--sub);line-height:1.75}
     .badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:.84rem;font-weight:900}
     .badge.pending{background:rgba(140,215,255,.12);color:var(--cyan)}
     .badge.approved{background:rgba(99,230,207,.12);color:var(--mint)}
@@ -106,7 +116,23 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="admin-gate" id="adminGate">
+    <div class="admin-gate-card">
+      <p class="eyebrow">Admin Gate</p>
+      <h1 style="font-size:clamp(2rem,4vw,3rem);margin-bottom:10px">管理ページへ入る</h1>
+      <p class="lead">管理ページに入る前に共通パスワードを入力してください。通過後に Discord 認証と審査用パスワード確認へ進めます。</p>
+      <form id="adminGateForm">
+        <label for="adminGatePassword">共通パスワード</label>
+        <input id="adminGatePassword" type="password" autocomplete="current-password" placeholder="パスワードを入力">
+        <div class="btns">
+          <button class="primary" type="submit">管理ページを開く</button>
+        </div>
+        <div id="adminGateStatus" class="status"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="wrap" id="adminShell" hidden>
     <header class="site-header">
       <div class="site-brand">
         <strong>米プレラ 管理ページ</strong>
@@ -115,6 +141,7 @@
       <nav class="header-nav" aria-label="管理ページ内ナビゲーション">
         <a class="header-link" href="#admin-overview">概要</a>
         <a class="header-link" href="#authCard">認証</a>
+        <a class="header-link" href="#crewSection">担当メモ</a>
         <a class="header-link" href="#settingsSection">設定</a>
         <a class="header-link" href="#officialEntries">公式予定</a>
         <a class="header-link" href="#participantEntries">参加登録</a>
@@ -132,6 +159,7 @@
       <nav class="toc-grid" aria-label="管理ページ目次">
         <a class="toc-link" href="#admin-overview">ページ概要</a>
         <a class="toc-link" href="#authCard">Discord認証</a>
+        <a class="toc-link" href="#crewSection">担当枠メモ</a>
         <a class="toc-link" href="#settingsSection">イベント設定</a>
         <a class="toc-link" href="#officialAdd">公式予定を追加</a>
         <a class="toc-link" href="#officialEntries">登録済みの公式予定</a>
@@ -201,6 +229,47 @@
             <p class="small" id="discordAccountMeta" style="margin-top:6px">Discord認証待ち</p>
           </div>
           <p class="small" id="authUser" style="margin-top:14px">Discord認証前です。</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="card anchor-section" id="crewSection" style="margin-top:18px" hidden>
+      <div class="section">
+        <div>
+          <p class="eyebrow">Crew Memo</p>
+          <h2>担当枠メモ</h2>
+        </div>
+      </div>
+      <div class="auth-grid">
+        <div class="side">
+          <p class="small">Discord 認証が済んでいれば、自分が担当する枠・曲数・使用名義をここで登録できます。審査パス通過後の運営メンバーには一覧も表示されます。</p>
+          <form id="crewForm" style="margin-top:16px">
+            <label for="crewCreditName">使用名義</label>
+            <input id="crewCreditName" name="crewCreditName" maxlength="80" placeholder="例: 米米 / subeteumusidesu" required>
+            <div class="row">
+              <div>
+                <label for="crewAssignedLanes">担当枠</label>
+                <input id="crewAssignedLanes" name="crewAssignedLanes" maxlength="120" placeholder="例: レーン2 / 20時台後半" required>
+              </div>
+              <div>
+                <label for="crewSongCount">担当曲数</label>
+                <input id="crewSongCount" name="crewSongCount" type="number" min="1" max="99" value="1" required>
+              </div>
+            </div>
+            <label for="crewNote">補足</label>
+            <textarea id="crewNote" name="crewNote" maxlength="300" placeholder="合作担当 / サムネ準備中 / 代理投稿 など"></textarea>
+            <div class="btns">
+              <button class="primary" type="submit">担当情報を保存</button>
+            </div>
+            <div id="crewStatus" class="status"></div>
+          </form>
+        </div>
+        <aside class="side">
+          <p class="eyebrow">Crew Board</p>
+          <p class="small" id="crewViewerHint">Discord 認証後に自分の担当情報が保存できます。審査パス通過後は他メンバーの担当情報もここで確認できます。</p>
+          <div id="crewList" class="crew-list">
+            <div class="crew-item"><span class="small">まだ担当情報はありません。</span></div>
+          </div>
         </aside>
       </div>
     </section>
@@ -319,8 +388,67 @@
     </div>
   </div>
 
-  <script src="./pickers.js?v=3"></script>
-  <script src="./motion.js?v=2"></script>
-  <script src="./admin.js?v=9"></script>
+  <script>
+    (() => {
+      const GATE_KEY = "kome_admin_gate_v1";
+      const GATE_PASSWORD = "SBCM818defolove";
+      const gate = document.getElementById("adminGate");
+      const shell = document.getElementById("adminShell");
+      const form = document.getElementById("adminGateForm");
+      const password = document.getElementById("adminGatePassword");
+      const status = document.getElementById("adminGateStatus");
+      const scripts = ["./pickers.js?v=3", "./motion.js?v=2", "./admin.js?v=11"];
+
+      const setStatus = (message, type = "") => {
+        status.textContent = message;
+        status.className = `status ${type}`.trim();
+      };
+
+      const loadScripts = async () => {
+        for (const src of scripts) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error(`${src} の読み込みに失敗しました。`));
+            document.body.appendChild(script);
+          });
+        }
+      };
+
+      const unlock = async () => {
+        sessionStorage.setItem(GATE_KEY, "ok");
+        gate.hidden = true;
+        shell.hidden = false;
+        try {
+          await loadScripts();
+        } catch (error) {
+          gate.hidden = false;
+          shell.hidden = true;
+          setStatus(error.message || String(error), "err");
+        }
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (String(password.value || "") !== GATE_PASSWORD) {
+          setStatus("パスワードが違います。", "err");
+          password.focus();
+          password.select();
+          return;
+        }
+        setStatus("");
+        await unlock();
+      });
+
+      if (sessionStorage.getItem(GATE_KEY) === "ok") {
+        unlock();
+      } else {
+        gate.hidden = false;
+        shell.hidden = true;
+        password.focus();
+      }
+    })();
+  </script>
 </body>
 </html>

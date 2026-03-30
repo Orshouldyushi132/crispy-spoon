@@ -4,6 +4,7 @@ const TABLES = {
   entries: "kome_prerush_entries",
   official: "kome_prerush_official_videos",
   settings: "kome_prerush_settings",
+  crew: "kome_prerush_admin_assignments",
 };
 
 const ENTRY_SELECT_BASE = "id,artist,title,parent_slot,start_time,url,note,status,created_at";
@@ -155,12 +156,17 @@ async function supabaseRequest(env, path, init = {}) {
 }
 
 export async function requireUnlockedSession(request, env) {
+  const session = await requireLinkedSession(request, env);
+  if (!session.reviewUnlocked) {
+    throw new HttpError(403, "Review password verification is required.");
+  }
+  return session;
+}
+
+export async function requireLinkedSession(request, env) {
   const session = await readAdminSession(request, env);
   if (!session?.discordUser) {
     throw new HttpError(401, "Discord authentication is required.");
-  }
-  if (!session.reviewUnlocked) {
-    throw new HttpError(403, "Review password verification is required.");
   }
   return session;
 }
@@ -210,6 +216,33 @@ function normalizeEntryRow(row) {
 
 function normalizeEntryRows(rows) {
   return Array.isArray(rows) ? rows.map(normalizeEntryRow) : [];
+}
+
+function normalizeCrewAssignment(row) {
+  return {
+    discord_user_id: String(row?.discord_user_id || ""),
+    discord_username: String(row?.discord_username || ""),
+    discord_global_name: String(row?.discord_global_name || ""),
+    credit_name: String(row?.credit_name || ""),
+    assigned_lanes: String(row?.assigned_lanes || ""),
+    song_count: Number(row?.song_count || 0),
+    note: String(row?.note || ""),
+    updated_at: row?.updated_at || null,
+  };
+}
+
+function defaultCrewAssignment(session) {
+  const discordUser = session?.discordUser || {};
+  return {
+    discord_user_id: String(discordUser.id || ""),
+    discord_username: String(discordUser.username || ""),
+    discord_global_name: String(discordUser.global_name || ""),
+    credit_name: "",
+    assigned_lanes: "",
+    song_count: 1,
+    note: "",
+    updated_at: null,
+  };
 }
 
 export async function getPublicSnapshot(env) {
@@ -293,6 +326,68 @@ export async function getAdminSnapshot(env) {
     entries: normalizeEntryRows(entries || []),
     official: official || [],
     settings: withDefaultSettings(settingsRows?.[0]),
+  };
+}
+
+export async function getCrewSnapshot(env, session) {
+  const ownRows = await supabaseRequest(
+    env,
+    `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&discord_user_id=eq.${encodeURIComponent(String(session.discordUser.id || ""))}&limit=1`,
+  );
+  const own = ownRows?.[0] ? normalizeCrewAssignment(ownRows[0]) : defaultCrewAssignment(session);
+  const entries = session.reviewUnlocked
+    ? await supabaseRequest(
+        env,
+        `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&order=updated_at.desc.nullslast`,
+      )
+    : [];
+  return {
+    ok: true,
+    own,
+    entries: Array.isArray(entries) ? entries.map(normalizeCrewAssignment) : [],
+  };
+}
+
+export async function saveCrewAssignment(env, session, body) {
+  const creditName = String(body.credit_name || "").trim();
+  const assignedLanes = String(body.assigned_lanes || "").trim();
+  const songCount = clampInt(body.song_count, 1, 99, 1);
+  const note = String(body.note || "").trim();
+  if (!creditName) {
+    throw new HttpError(400, "使用名義を入力してください。");
+  }
+  if (creditName.length > 80) {
+    throw new HttpError(400, "使用名義は 80 文字以内で入力してください。");
+  }
+  if (!assignedLanes) {
+    throw new HttpError(400, "担当枠を入力してください。");
+  }
+  if (assignedLanes.length > 120) {
+    throw new HttpError(400, "担当枠は 120 文字以内で入力してください。");
+  }
+  if (note.length > 300) {
+    throw new HttpError(400, "補足は 300 文字以内で入力してください。");
+  }
+  const payload = {
+    discord_user_id: String(session.discordUser.id || ""),
+    discord_username: String(session.discordUser.username || ""),
+    discord_global_name: String(session.discordUser.global_name || ""),
+    credit_name: creditName,
+    assigned_lanes: assignedLanes,
+    song_count: songCount,
+    note,
+    updated_at: new Date().toISOString(),
+  };
+  await supabaseRequest(env, `${TABLES.crew}?on_conflict=discord_user_id`, {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify([payload]),
+  });
+  return {
+    ok: true,
+    assignment: normalizeCrewAssignment(payload),
   };
 }
 

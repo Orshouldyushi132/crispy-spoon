@@ -5,6 +5,7 @@ import * as adminLogout from "../functions/api/admin/logout.js";
 import * as adminOfficial from "../functions/api/admin/official.js";
 import * as adminSettings from "../functions/api/admin/settings.js";
 import * as adminVerifyPassword from "../functions/api/admin/verify-password.js";
+import * as adminCrew from "../functions/api/admin/crew.js";
 import * as publicData from "../functions/api/public/data.js";
 import * as publicEntries from "../functions/api/public/entries.js";
 import * as publicStatuses from "../functions/api/public/statuses.js";
@@ -19,6 +20,7 @@ const ROUTES = [
   { path: "/api/admin/official", POST: adminOfficial.onRequestPost },
   { path: "/api/admin/settings", POST: adminSettings.onRequestPost },
   { path: "/api/admin/verify-password", POST: adminVerifyPassword.onRequestPost },
+  { path: "/api/admin/crew", GET: adminCrew.onRequestGet, POST: adminCrew.onRequestPost },
   { path: "/api/public/data", GET: publicData.onRequestGet },
   { path: "/api/public/entries", POST: publicEntries.onRequestPost },
   { path: "/api/public/statuses", POST: publicStatuses.onRequestPost },

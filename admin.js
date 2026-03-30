@@ -4,6 +4,15 @@ const $ = (id) => document.getElementById(id);
 const els = {
   page: $("pageStatus"),
   app: $("adminApp"),
+  crewSection: $("crewSection"),
+  crewForm: $("crewForm"),
+  crewStatus: $("crewStatus"),
+  crewCreditName: $("crewCreditName"),
+  crewAssignedLanes: $("crewAssignedLanes"),
+  crewSongCount: $("crewSongCount"),
+  crewNote: $("crewNote"),
+  crewViewerHint: $("crewViewerHint"),
+  crewList: $("crewList"),
   authStatus: $("authStatus"),
   authState: $("authState"),
   authHint: $("authHint"),
@@ -49,6 +58,7 @@ let sessionState = null;
 let sessionInfo = { discordConfigured: true, missingDiscordEnv: [] };
 let appReady = false;
 let lastRefreshKey = "";
+let crewReadyKey = "";
 
 function setMsg(el, message, type = "") {
   if (!el) return;
@@ -122,6 +132,35 @@ function drawSummary(entries, official, settings) {
   els.sumDate.textContent = formatDate(settings.event_date);
   els.sumPending.textContent = String(entries.filter((item) => item.status === "pending").length);
   els.sumOfficial.textContent = String(official.length);
+}
+
+function fillCrewForm(assignment = {}) {
+  els.crewCreditName.value = String(assignment.credit_name || "");
+  els.crewAssignedLanes.value = String(assignment.assigned_lanes || "");
+  els.crewSongCount.value = String(assignment.song_count || 1);
+  els.crewNote.value = String(assignment.note || "");
+}
+
+function renderCrewList(entries = []) {
+  if (!sessionState?.discordUser) {
+    els.crewList.innerHTML = '<div class="crew-item"><span class="small">Discord認証後に担当情報が表示されます。</span></div>';
+    return;
+  }
+  if (!sessionState?.reviewUnlocked) {
+    els.crewList.innerHTML = '<div class="crew-item"><span class="small">レビュー用パスワード通過後に、ほかの担当情報もここで確認できます。</span></div>';
+    return;
+  }
+  if (!entries.length) {
+    els.crewList.innerHTML = '<div class="crew-item"><span class="small">まだ担当情報はありません。</span></div>';
+    return;
+  }
+  els.crewList.innerHTML = entries.map((item) => {
+    const accountName = String(item.discord_global_name || item.discord_username || "Discord User");
+    const noteBlock = String(item.note || "").trim()
+      ? `<p class="crew-item-note">${esc(item.note)}</p>`
+      : "";
+    return `<article class="crew-item"><div class="crew-item-head"><div><strong>${esc(item.credit_name || "未設定")}</strong><p class="small">@${esc(item.discord_username || "")} / ${esc(accountName)}</p></div><span class="badge pending">${esc(String(item.song_count || 0))}曲担当</span></div><div class="crew-item-meta"><span><strong>担当枠</strong><br>${esc(item.assigned_lanes || "未設定")}</span><span><strong>更新</strong><br>${esc(formatDate(String(item.updated_at || "").slice(0, 10)) || "未更新")}</span></div>${noteBlock}</article>`;
+  }).join("");
 }
 
 function bindCardToggles(scope) {
@@ -356,6 +395,7 @@ function applySessionUi(data) {
     els.discordAccountName.textContent = "未設定";
     els.discordAccountMeta.textContent = "Cloudflare の Discord 設定待ち";
     els.reviewerIdentity.textContent = "Discord認証の設定完了後に、承認操作のアカウント表示が有効になります。";
+    els.crewSection.hidden = true;
     els.app.hidden = true;
     return;
   }
@@ -366,6 +406,7 @@ function applySessionUi(data) {
     els.discordAccountName.textContent = "未連携";
     els.discordAccountMeta.textContent = "Discord認証待ち";
     els.reviewerIdentity.textContent = "Discord認証後に審査モードが開きます。";
+    els.crewSection.hidden = true;
     els.app.hidden = true;
     return;
   }
@@ -374,6 +415,7 @@ function applySessionUi(data) {
   els.discordAccountMeta.textContent = `@${session.discordUser.username} / ID: ${session.discordUser.id}`;
   els.authUser.textContent = `現在のDiscord連携: ${accountName} (@${session.discordUser.username})`;
   els.reviewerIdentity.textContent = `現在の操作アカウント: ${accountName} (@${session.discordUser.username})${unlocked ? " / 審査モード有効" : " / パスワード待ち"}`;
+  els.crewSection.hidden = false;
   if (unlocked) {
     setAuthBadge("審査モード中", "approved");
     els.authHint.textContent = "Discord認証とパスワード確認が完了しています。承認・差し戻し・設定変更が使えます。";
@@ -386,9 +428,36 @@ function applySessionUi(data) {
   }
 }
 
+async function syncCrew(force = false) {
+  if (!sessionState?.discordUser) {
+    els.crewSection.hidden = true;
+    crewReadyKey = "";
+    return;
+  }
+  const crewKey = `${sessionState.discordUser.id}:${sessionState.reviewUnlocked ? sessionState.unlockedAt || "open" : "linked"}`;
+  if (!force && crewKey === crewReadyKey) return;
+  const snapshot = await api("/crew");
+  fillCrewForm(snapshot.own || {});
+  renderCrewList(Array.isArray(snapshot.entries) ? snapshot.entries : []);
+  els.crewViewerHint.textContent = sessionState.reviewUnlocked
+    ? "Discord 認証済みメンバーの担当枠・曲数・使用名義を一覧で確認できます。"
+    : "いまは自分の担当情報だけ保存できます。レビュー用パスワード通過後に、ほかの担当情報もここで見られます。";
+  crewReadyKey = crewKey;
+}
+
 async function syncSession(force = false) {
   const data = await api("/session");
   applySessionUi(data);
+  if (sessionState?.discordUser) {
+    try {
+      await syncCrew(force);
+      setMsg(els.crewStatus, "");
+    } catch (error) {
+      crewReadyKey = "";
+      renderCrewList([]);
+      setMsg(els.crewStatus, `担当情報の読み込みに失敗しました: ${error.message || error}`, "err");
+    }
+  }
   if (sessionState?.reviewUnlocked) {
     await refresh(force);
   }
@@ -453,13 +522,39 @@ els.unlockReview.addEventListener("click", async () => {
   }
 });
 
+els.crewForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!sessionState?.discordUser) {
+    setMsg(els.crewStatus, "先に Discord で認証してください。", "err");
+    return;
+  }
+  const payload = {
+    credit_name: String(els.crewCreditName.value || "").trim(),
+    assigned_lanes: String(els.crewAssignedLanes.value || "").trim(),
+    song_count: clampInt(els.crewSongCount.value, 1, 99, 1),
+    note: String(els.crewNote.value || "").trim(),
+  };
+  try {
+    await postJson("/crew", payload);
+    setMsg(els.crewStatus, "担当情報を保存しました。", "ok");
+    await syncCrew(true);
+  } catch (error) {
+    setMsg(els.crewStatus, `担当情報の保存に失敗しました: ${error.message || error}`, "err");
+  }
+});
+
 els.signOut.addEventListener("click", async () => {
   try {
     await postJson("/logout", {});
     sessionState = null;
     appReady = false;
     lastRefreshKey = "";
+    crewReadyKey = "";
     els.reviewPassword.value = "";
+    els.crewSection.hidden = true;
+    fillCrewForm();
+    renderCrewList([]);
+    setMsg(els.crewStatus, "");
     setMsg(els.authStatus, "Discord連携を解除しました。", "ok");
     await syncSession(true);
   } catch (error) {
