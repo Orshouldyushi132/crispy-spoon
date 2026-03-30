@@ -34,6 +34,7 @@ const clampInt = (value, min, max, fallback) => {
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 };
 const uid = () => window.crypto?.randomUUID?.() || (`id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const DELETED_REVIEW_NOTE = "あなたの動画申請は削除されました。";
 const safeUrl = (value, allowEmpty = false) => {
   const text = String(value || "").trim();
   if (!text) return allowEmpty ? "" : null;
@@ -77,6 +78,10 @@ function statusBadge(status) {
   if (status === "rejected") return '<span class="badge rejected">差し戻し</span>';
   if (status === "deleted") return '<span class="badge rejected">削除済み</span>';
   return '<span class="badge pending">審査待ち</span>';
+}
+
+function isSoftDeletedEntry(item) {
+  return String(item?.status || "") === "deleted" || String(item?.review_note || "").trim() === DELETED_REVIEW_NOTE;
 }
 
 async function api(path, init = {}) {
@@ -276,7 +281,9 @@ function drawOfficial(list) {
 }
 
 function drawEntries(list) {
-  const items = [...list].sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
+  const items = [...list]
+    .filter((item) => !isSoftDeletedEntry(item))
+    .sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time));
   els.admin.innerHTML = items.length
     ? items.map((item) => {
       const detailParts = [];

@@ -437,6 +437,9 @@ export async function updatePublicEntry(env, request, body) {
   if (String(current.applicant_key || "") !== applicantKey) {
     throw new HttpError(403, "この参加登録は修正できません。");
   }
+  if (String(current.status || "") === "deleted" || String(current.review_note || "") === DELETED_ENTRY_NOTE) {
+    throw new HttpError(409, "削除済みの申請は再申請できません。新しく申請してください。");
+  }
   if (String(current.status || "") !== "rejected") {
     throw new HttpError(409, "差し戻し済みの参加登録だけ修正できます。");
   }
@@ -559,8 +562,20 @@ export async function mutateEntry(env, body) {
       });
     } catch (error) {
       const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
-      if (reviewColumnsMissing || isDeletedStatusConstraintError(error)) {
-        throw new HttpError(409, "削除通知を申請者側に表示するには、Supabase で deleted 状態の追加が必要です。supabase-migrate-deleted-status.sql を実行してください。");
+      if (reviewColumnsMissing) {
+        throw new HttpError(409, "削除通知の保存に必要な列がまだありません。Supabase で supabase-setup.sql を再実行してください。");
+      }
+      if (isDeletedStatusConstraintError(error)) {
+        await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            status: "rejected",
+            review_note: DELETED_ENTRY_NOTE,
+            reviewed_at: new Date().toISOString(),
+          }),
+        });
+        return { ok: true, mode: "fallback" };
       }
       throw error;
     }

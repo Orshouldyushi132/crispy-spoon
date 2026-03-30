@@ -10,6 +10,7 @@ const LS = "kome_prerush_settings_v1";
 const LF = "kome_prerush_viewer_favorites_v1";
 const LT = "kome_prerush_tracked_submission_ids_v1";
 const PUBLIC_API_BASE = "/api/public";
+const DELETED_REVIEW_NOTE = "あなたの動画申請は削除されました。";
 
 const DEFAULT_SETTINGS = {
   event_date: "2026-08-18",
@@ -260,6 +261,8 @@ const badge = (status) => {
   if (status === "deleted") return '<span class="badge rejected">削除済み</span>';
   return '<span class="badge pending">審査待ち</span>';
 };
+const isDeletedEntryNotice = (item) => String(item?.status || "") === "deleted" || String(item?.review_note || "").trim() === DELETED_REVIEW_NOTE;
+const isEditableRejectedEntry = (item) => String(item?.status || "") === "rejected" && !isDeletedEntryNotice(item);
 
 const link = (url, label, className = "linkbtn") => {
   const resolved = safeUrl(url, true);
@@ -722,7 +725,7 @@ function drawTimeline(list) {
 }
 
 function getEditableEntry() {
-  return trackedEntriesCache.find((item) => String(item.id || "") === editingEntryId && String(item.status || "") === "rejected") || null;
+  return trackedEntriesCache.find((item) => String(item.id || "") === editingEntryId && isEditableRejectedEntry(item)) || null;
 }
 
 function applyEntryFormMode() {
@@ -767,7 +770,7 @@ function loadEntryIntoForm(entry) {
 }
 
 function startEditingEntry(id) {
-  const entry = trackedEntriesCache.find((item) => String(item.id || "") === String(id || "") && String(item.status || "") === "rejected");
+  const entry = trackedEntriesCache.find((item) => String(item.id || "") === String(id || "") && isEditableRejectedEntry(item));
   if (!entry) return;
   editingEntryId = entry.id;
   loadEntryIntoForm(entry);
@@ -806,10 +809,11 @@ function drawPending(entries, trackedEntries = []) {
     .sort((a, b) => Number(a.parent_slot) - Number(b.parent_slot) || mins(a.start_time) - mins(b.start_time))
     .map((item) => {
       const reviewNote = String(item.review_note || "").trim();
+      const deletedNotice = isDeletedEntryNotice(item);
       const reviewLabel = reviewNote
-        || (item.status === "rejected" ? "差し戻し理由は管理側で設定されます。" : "")
-        || (item.status === "deleted" ? "あなたの動画申請は削除されました。" : "");
-      const isRejected = String(item.status || "") === "rejected";
+        || (deletedNotice ? DELETED_REVIEW_NOTE : "")
+        || (item.status === "rejected" ? "差し戻し理由は管理側で設定されます。" : "");
+      const isRejected = isEditableRejectedEntry(item);
       const detailParts = [];
       if (String(item.note || "").trim()) {
         detailParts.push(`<div><p class="stack-detail-label">補足</p><p class="stack-detail-value">${esc(item.note)}</p></div>`);
@@ -825,16 +829,16 @@ function drawPending(entries, trackedEntries = []) {
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="muted">URLなし</span>';
-      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status">${badge(item.status || "approved")}</div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">曲名</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status">${deletedNotice ? '<span class="badge rejected">削除済み</span>' : badge(item.status || "approved")}</div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">曲名</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("");
 
   const tracked = trackedEntries.filter((item) => item && item.id);
   const latestReviewUpdate = [...tracked]
-    .filter((item) => item.status === "rejected" || item.status === "deleted")
+    .filter((item) => String(item.status || "") === "rejected" || isDeletedEntryNotice(item))
     .sort((a, b) => new Date(b.reviewed_at || b.created_at || 0) - new Date(a.reviewed_at || a.created_at || 0))[0] || null;
 
-  if (latestReviewUpdate?.status === "deleted") {
-    els.entryReviewNotice.textContent = String(latestReviewUpdate.review_note || "あなたの動画申請は削除されました。").trim();
+  if (latestReviewUpdate && isDeletedEntryNotice(latestReviewUpdate)) {
+    els.entryReviewNotice.textContent = String(latestReviewUpdate.review_note || DELETED_REVIEW_NOTE).trim();
   } else if (latestReviewUpdate?.status === "rejected") {
     els.entryReviewNotice.textContent = `差し戻しがありました。理由: ${String(latestReviewUpdate.review_note || "内容を確認して再申請してください。").trim()}`;
   } else if (tracked.length) {
