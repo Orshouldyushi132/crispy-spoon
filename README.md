@@ -109,6 +109,8 @@ create table public.kome_prerush_settings (
 
 既存の Supabase プロジェクトを使っている場合も、この `supabase-setup.sql` をもう一度実行してください。`review_note` / `reviewed_at` / `applicant_key` 列が追加され、差し戻し理由の通知と本人向け状態確認に使われます。
 
+`supabase-setup.sql` 全体ではなく差分だけを当てたいときは、`supabase-migrate-review-notice.sql` を実行すると必要な列追加とポリシー更新だけ反映できます。
+
 ### 公開ページ向けの RLS
 
 ```sql
