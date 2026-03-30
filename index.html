@@ -189,6 +189,7 @@
     input:focus,select:focus,textarea:focus{border-color:rgba(140,215,255,.7);box-shadow:0 0 0 4px rgba(140,215,255,.1)}
     textarea{min-height:96px;resize:vertical}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row-3{grid-template-columns:1fr 1fr 1fr}
     button{appearance:none;border:none;cursor:pointer;border-radius:999px;min-height:46px;padding:12px 18px;font:inherit;font-weight:900}
     .primary{background:linear-gradient(90deg,var(--cyan),var(--mint));color:#061018}
     .ghost{background:rgba(255,255,255,.04);color:var(--text);border:1px solid rgba(255,255,255,.1)}
@@ -608,7 +609,7 @@
             <input id="artist" name="artist" maxlength="80" placeholder="例：炊飯器 / おこめP" required>
             <label for="title">動画タイトル / 曲名</label>
             <input id="title" name="title" maxlength="120" placeholder="例：全てお米の所為です。" required>
-            <div class="row">
+            <div class="row row-3">
               <div>
                 <label for="parentSlot">枠</label>
                 <div class="picker" data-picker="select" data-chip="FRAME">
@@ -625,6 +626,18 @@
                     <option value="10">エヌ枠</option>
                     <option value="11">K²枠</option>
                     <option value="12">オリジナル枠</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label for="parentNumber">親</label>
+                <div class="picker" data-picker="select" data-chip="PARENT">
+                  <select id="parentNumber" name="parentNumber" required>
+                    <option value="1">親1</option>
+                    <option value="2">親2</option>
+                    <option value="3">親3</option>
+                    <option value="4">親4</option>
+                    <option value="5">親5</option>
                   </select>
                 </div>
               </div>
@@ -657,8 +670,8 @@
           <p class="note" id="entryReviewNotice" style="margin-bottom:12px">この端末から送った参加登録の状態、または掲載済みの参加動画をここに表示します。ほかの未掲載申請は公開しません。</p>
           <div class="table stacked-table">
             <table class="schedule-table">
-              <thead><tr><th>状態</th><th>枠</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">審査メモ</th><th class="action-col">操作</th></tr></thead>
-              <tbody id="pendingBody"><tr><td colspan="9" class="empty">まだ登録はありません。</td></tr></tbody>
+              <thead><tr><th>状態</th><th>枠</th><th>親</th><th>時間</th><th class="title-col">タイトル</th><th class="artist-col">名義</th><th class="url-col">URL</th><th class="note-col">補足</th><th class="review-col">審査メモ</th><th class="action-col">操作</th></tr></thead>
+              <tbody id="pendingBody"><tr><td colspan="10" class="empty">まだ登録はありません。</td></tr></tbody>
             </table>
           </div>
         </main>
@@ -676,7 +689,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=16"></script>
+  <script src="./public.js?v=18"></script>
   <script type="application/json" id="legacyPublicScript" hidden>
     if(false){
     const SUPABASE_URL="",SUPABASE_ANON_KEY="",ET="kome_prerush_entries",OT="kome_prerush_official_videos",ST="kome_prerush_settings",SID="default",LE="kome_prerush_entries_local_v3",LO="kome_prerush_official_v1",LS="kome_prerush_settings_v1",LF="kome_prerush_viewer_favorites_v1";

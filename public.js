@@ -38,6 +38,11 @@ const SLOT_LABELS = {
   12: "オリジナル枠",
 };
 
+const parentLabel = (value) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= 5 ? `親${number}` : "";
+};
+
 const $ = (id) => document.getElementById(id);
 const els = {
   form: $("entryForm"),
@@ -98,6 +103,7 @@ const els = {
   artist: $("artist"),
   titleInput: $("title"),
   parentSlot: $("parentSlot"),
+  parentNumber: $("parentNumber"),
   startTime: $("startTime"),
   urlInput: $("url"),
   noteInput: $("note"),
@@ -364,12 +370,18 @@ async function api(path, init = {}) {
 
 async function getEntriesDirect() {
   if (shared) {
-    const { data, error } = await sb.from(ET)
+    const primary = await sb.from(ET)
+      .select("id,artist,title,parent_slot,parent_number,start_time,url,note,status,created_at")
+      .eq("status", "approved")
+      .order("start_time", { ascending: true });
+    if (!primary.error) return primary.data || [];
+    if (!String(primary.error?.message || "").includes("parent_number")) throw primary.error;
+    const fallback = await sb.from(ET)
       .select("id,artist,title,parent_slot,start_time,url,note,status,created_at")
       .eq("status", "approved")
       .order("start_time", { ascending: true });
-    if (error) throw error;
-    return data || [];
+    if (fallback.error) throw fallback.error;
+    return fallback.data || [];
   }
   return read(LE, []);
 }
@@ -446,7 +458,13 @@ async function addEntry(entry) {
   }
   if (shared) {
     const { error } = await sb.from(ET).insert(entry);
-    if (error) throw error;
+    if (error) {
+      if (!String(error.message || "").includes("parent_number")) throw error;
+      const legacyEntry = { ...entry };
+      delete legacyEntry.parent_number;
+      const retry = await sb.from(ET).insert(legacyEntry);
+      if (retry.error) throw retry.error;
+    }
     sourceMode = "supabase";
     return;
   }
@@ -473,6 +491,7 @@ async function updateEntry(entry) {
         artist: entry.artist,
         title: entry.title,
         parent_slot: entry.parent_slot,
+        parent_number: entry.parent_number,
         start_time: entry.start_time,
         url: entry.url,
         note: entry.note,
@@ -480,7 +499,22 @@ async function updateEntry(entry) {
       })
       .eq("id", entry.id)
       .eq("status", "rejected");
-    if (error) throw error;
+    if (error) {
+      if (!String(error.message || "").includes("parent_number")) throw error;
+      const retry = await sb.from(ET)
+        .update({
+          artist: entry.artist,
+          title: entry.title,
+          parent_slot: entry.parent_slot,
+          start_time: entry.start_time,
+          url: entry.url,
+          note: entry.note,
+          status: "pending",
+        })
+        .eq("id", entry.id)
+        .eq("status", "rejected");
+      if (retry.error) throw retry.error;
+    }
     sourceMode = "supabase";
     return;
   }
@@ -496,6 +530,7 @@ async function updateEntry(entry) {
     artist: entry.artist,
     title: entry.title,
     parent_slot: entry.parent_slot,
+    parent_number: entry.parent_number,
     start_time: entry.start_time,
     url: entry.url,
     note: entry.note,
@@ -532,6 +567,7 @@ const merged = (approved, official, currentSettings) => [
     artist: String(item.artist || "").trim(),
     start_time: String(item.start_time || "").trim(),
     parent_slot: Number(item.parent_slot || 0),
+    parent_number: Number(item.parent_number || 0),
     url: safeUrl(item.url, true),
     note: String(item.note || "").trim(),
     date: toDate(currentSettings.event_date, item.start_time),
@@ -543,6 +579,7 @@ const merged = (approved, official, currentSettings) => [
     artist: currentSettings.official_name,
     start_time: String(item.start_time || "").trim(),
     parent_slot: 0,
+    parent_number: 0,
     url: safeUrl(item.url, true),
     note: String(item.note || "").trim(),
     date: toDate(currentSettings.event_date, item.start_time),
@@ -703,6 +740,7 @@ function drawTimeline(list) {
           <div class="tags">
             <span class="tag ${item.kind === "official" ? "official" : "participant"}">${item.kind === "official" ? "公式予定" : "参加動画"}</span>
             <span class="tag neutral">${item.kind === "official" ? "公式" : esc(slotLabel(item.parent_slot))}</span>
+            ${item.kind === "participant" && parentLabel(item.parent_number) ? `<span class="tag neutral">${esc(parentLabel(item.parent_number))}</span>` : ""}
             <span class="view-badge ${phase.klass}">${esc(phase.label)}</span>
             <span class="tag neutral">${esc(overlapText)}</span>
           </div>
@@ -767,6 +805,7 @@ function resetEntryForm({ keepStatus = false } = {}) {
   editingEntryId = "";
   els.form.reset();
   els.parentSlot.value = "1";
+  els.parentNumber.value = "1";
   els.startTime.value = "19:00";
   window.syncCustomPickers?.(els.form);
   updateEntryHelper();
@@ -778,6 +817,7 @@ function loadEntryIntoForm(entry) {
   els.artist.value = String(entry.artist || "");
   els.titleInput.value = String(entry.title || "");
   els.parentSlot.value = String(entry.parent_slot || "1");
+  els.parentNumber.value = String(entry.parent_number || "1");
   els.startTime.value = String(entry.start_time || "19:00");
   els.urlInput.value = String(entry.url || "");
   els.noteInput.value = String(entry.note || "");
@@ -841,11 +881,11 @@ function drawPending(entries, trackedEntries = []) {
         detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button type="button" class="ghost table-edit-btn" data-edit-entry="${esc(item.id)}">修正して再申請</button></div></div>`);
       }
       const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
-      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotLabel(item.parent_slot))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
+      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">枠</span><span class="stack-summary-value">${esc(slotLabel(item.parent_slot))}</span></div><div class="stack-summary-item"><span class="stack-summary-label">親</span><span class="stack-summary-value">${esc(parentLabel(item.parent_number) || "未設定")}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
       const urlButton = safeUrl(item.url, true)
         ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="muted">URLなし</span>';
-      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status">${deletedNotice ? '<span class="badge rejected">削除済み</span>' : badge(item.status || "approved")}</div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">曲名</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+      return `<tr class="stack-card-row"><td colspan="10"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status">${deletedNotice ? '<span class="badge rejected">削除済み</span>' : badge(item.status || "approved")}</div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">曲名</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("");
 
   const tracked = trackedEntries.filter((item) => item && item.id);
@@ -867,14 +907,14 @@ function drawPending(entries, trackedEntries = []) {
     const pendingLocal = entries.filter((item) => item.status !== "approved");
     els.pending.innerHTML = pendingLocal.length
       ? renderRows([...pendingLocal], true)
-      : '<tr><td colspan="9" class="empty">まだ登録はありません。</td></tr>';
+      : '<tr><td colspan="10" class="empty">まだ登録はありません。</td></tr>';
   } else if (tracked.length) {
     els.pending.innerHTML = renderRows([...tracked], true);
   } else {
     const approvedPreview = approvedEntries.slice(0, 8).map((item) => ({ ...item, status: "approved" }));
     els.pending.innerHTML = approvedPreview.length
       ? renderRows(approvedPreview, false)
-      : '<tr><td colspan="9" class="empty">この端末から送った参加登録はまだありません。送信後はここで状態を確認できます。</td></tr>';
+      : '<tr><td colspan="10" class="empty">この端末から送った参加登録はまだありません。送信後はここで状態を確認できます。</td></tr>';
   }
 
   bindCardToggles(els.pending);
@@ -1013,7 +1053,7 @@ function drawNext() {
   els.nextTime.textContent = fmtDiff(upcoming.date.getTime() - Date.now());
   els.nextText.textContent = upcoming.title;
   els.nextMeta1.textContent = owner(upcoming);
-  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotLabel(upcoming.parent_slot)}`;
+  els.nextMeta2.textContent = `${upcoming.start_time} 開始予定 / ${slotLabel(upcoming.parent_slot)}${parentLabel(upcoming.parent_number) ? ` / ${parentLabel(upcoming.parent_number)}` : ""}`;
   els.nextKind.textContent = "承認済みの参加動画";
   els.nextState.textContent = phase.label;
   els.nextState.className = `view-badge ${phase.klass}`;
@@ -1070,12 +1110,13 @@ function recommendTimes(lane, targetMinute) {
 function updatePromoTemplate() {
   const artist = String(els.artist.value || "").trim() || "投稿名義";
   const title = String(els.titleInput.value || "").trim() || "動画タイトル";
+  const parent = parentLabel(els.parentNumber.value);
   const time = String(els.startTime.value || "").trim() || "19:00";
   const url = safeUrl(els.urlInput.value, true) || "";
   const tag = settings.event_hashtag ? `\n${settings.event_hashtag}` : "";
   const lines = [
     `${fmtDate(settings.event_date)} の米プレラに ${artist} 名義で参加予定です。`,
-    `${time} から「${title}」をプレミア公開します。`,
+    `${time} から「${title}」を ${slotLabel(els.parentSlot.value)} / ${parent || "親未設定"} でプレミア公開します。`,
     url,
   ].filter(Boolean);
   els.promoTemplate.value = `${lines.join("\n")}${tag}`.trim();
@@ -1214,7 +1255,7 @@ els.downloadFavorites.addEventListener("click", () => downloadCalendar(schedule,
 els.downloadAll.addEventListener("click", () => downloadCalendar(schedule, "all"));
 els.copyPromo.addEventListener("click", copyPromoTemplate);
 
-[els.artist, els.titleInput, els.parentSlot, els.startTime, els.urlInput, els.noteInput].forEach((element) => {
+[els.artist, els.titleInput, els.parentSlot, els.parentNumber, els.startTime, els.urlInput, els.noteInput].forEach((element) => {
   element.addEventListener("input", updateEntryHelper);
 });
 
@@ -1226,6 +1267,7 @@ els.form.addEventListener("submit", async (event) => {
   const artist = String(formData.get("artist") || "").trim();
   const title = String(formData.get("title") || "").trim();
   const parent = Number(formData.get("parentSlot") || 0);
+  const parentNumber = Number(formData.get("parentNumber") || 0);
   const time = String(formData.get("startTime") || "").trim();
   const url = safeUrl(formData.get("url"));
   const note = String(formData.get("note") || "").trim();
@@ -1238,6 +1280,10 @@ els.form.addEventListener("submit", async (event) => {
   }
   if (!(parent >= 1 && parent <= 12)) {
     setStatus("枠は表示されている選択肢から選んでね。", "err");
+    return;
+  }
+  if (!(parentNumber >= 1 && parentNumber <= 5)) {
+    setStatus("親は 1〜5 から選んでね。", "err");
     return;
   }
   if (!okTime(time)) {
@@ -1266,6 +1312,7 @@ els.form.addEventListener("submit", async (event) => {
         artist,
         title,
         parent_slot: parent,
+        parent_number: parentNumber,
         start_time: time,
         url,
         note,
@@ -1279,6 +1326,7 @@ els.form.addEventListener("submit", async (event) => {
         artist,
         title,
         parent_slot: parent,
+        parent_number: parentNumber,
         start_time: time,
         url,
         note,

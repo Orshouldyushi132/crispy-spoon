@@ -3,6 +3,7 @@ create table if not exists public.kome_prerush_entries (
   artist text not null check (char_length(artist) between 1 and 80),
   title text not null check (char_length(title) between 1 and 120),
   parent_slot integer not null check (parent_slot between 1 and 12),
+  parent_number integer not null default 1 check (parent_number between 1 and 5),
   start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
   url text not null check (url ~ '^https?://'),
   note text,
@@ -49,6 +50,10 @@ create table if not exists public.kome_prerush_admin_assignments (
 alter table public.kome_prerush_entries add column if not exists review_note text not null default '';
 alter table public.kome_prerush_entries add column if not exists reviewed_at timestamptz;
 alter table public.kome_prerush_entries add column if not exists applicant_key text;
+alter table public.kome_prerush_entries add column if not exists parent_number integer;
+update public.kome_prerush_entries set parent_number = 1 where parent_number is null;
+alter table public.kome_prerush_entries alter column parent_number set default 1;
+alter table public.kome_prerush_entries alter column parent_number set not null;
 
 do $$
 begin
@@ -65,6 +70,25 @@ begin
   alter table public.kome_prerush_entries
     add constraint kome_prerush_entries_status_check
     check (status in ('pending', 'approved', 'rejected', 'deleted'));
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.kome_prerush_entries'::regclass
+      and conname = 'kome_prerush_entries_parent_number_check'
+  ) then
+    alter table public.kome_prerush_entries
+      drop constraint kome_prerush_entries_parent_number_check;
+  end if;
+
+  alter table public.kome_prerush_entries
+    add constraint kome_prerush_entries_parent_number_check
+    check (parent_number between 1 and 5);
 exception
   when duplicate_object then null;
 end $$;
@@ -92,6 +116,7 @@ to anon, authenticated
 with check (
   status = 'pending'
   and parent_slot between 1 and 12
+  and parent_number between 1 and 5
   and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
   and review_note = ''
   and reviewed_at is null

@@ -7,7 +7,9 @@ const TABLES = {
   crew: "kome_prerush_admin_assignments",
 };
 
-const ENTRY_SELECT_BASE = "id,artist,title,parent_slot,start_time,url,note,status,created_at";
+const ENTRY_SELECT_BASE_LEGACY = "id,artist,title,parent_slot,start_time,url,note,status,created_at";
+const ENTRY_SELECT_BASE = `${ENTRY_SELECT_BASE_LEGACY},parent_number`;
+const ENTRY_SELECT_WITH_REVIEW_LEGACY = `${ENTRY_SELECT_BASE_LEGACY},review_note,reviewed_at`;
 const ENTRY_SELECT_WITH_REVIEW = `${ENTRY_SELECT_BASE},review_note,reviewed_at`;
 const DELETED_ENTRY_NOTE = "あなたの動画申請は削除されました。";
 
@@ -209,6 +211,7 @@ function isDeletedStatusConstraintError(error) {
 function normalizeEntryRow(row) {
   return {
     ...row,
+    parent_number: Number(row?.parent_number || 0),
     review_note: String(row?.review_note || ""),
     reviewed_at: row?.reviewed_at || null,
   };
@@ -246,14 +249,20 @@ function defaultCrewAssignment(session) {
 }
 
 export async function getPublicSnapshot(env) {
-  const [entries, official, settingsRows] = await Promise.all([
-    supabaseRequest(env, `${TABLES.entries}?select=id,artist,title,parent_slot,start_time,url,note,status,created_at&status=eq.approved&order=start_time.asc`),
+  let entries;
+  try {
+    entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_BASE}&status=eq.approved&order=start_time.asc`);
+  } catch (error) {
+    if (!isMissingEntryColumnError(error, "parent_number")) throw error;
+    entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_BASE_LEGACY}&status=eq.approved&order=start_time.asc`);
+  }
+  const [official, settingsRows] = await Promise.all([
     supabaseRequest(env, `${TABLES.official}?select=id,title,start_time,url,note,created_at&order=start_time.asc`),
     supabaseRequest(env, `${TABLES.settings}?select=id,event_date,official_name,official_url,event_hashtag,x_search_url,live_playlist_url,archive_playlist_url,entry_close_minutes&id=eq.default`),
   ]);
   return {
     ok: true,
-    entries: entries || [],
+    entries: normalizeEntryRows(entries || []),
     official: official || [],
     settings: withDefaultSettings(settingsRows?.[0]),
   };
@@ -284,12 +293,17 @@ export async function getPublicEntryStatuses(env, request, ids) {
   } catch (error) {
     const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
     const applicantColumnMissing = isMissingEntryColumnError(error, "applicant_key");
-    if (!reviewColumnsMissing && !applicantColumnMissing) {
+    const parentColumnMissing = isMissingEntryColumnError(error, "parent_number");
+    if (!reviewColumnsMissing && !applicantColumnMissing && !parentColumnMissing) {
       throw error;
     }
     [byIds, byApplicant] = await Promise.all([
-      loadByIds(reviewColumnsMissing ? ENTRY_SELECT_BASE : ENTRY_SELECT_WITH_REVIEW),
-      applicantColumnMissing ? Promise.resolve([]) : loadByApplicant(reviewColumnsMissing ? ENTRY_SELECT_BASE : ENTRY_SELECT_WITH_REVIEW),
+      loadByIds(reviewColumnsMissing
+        ? (parentColumnMissing ? ENTRY_SELECT_BASE_LEGACY : ENTRY_SELECT_BASE)
+        : (parentColumnMissing ? ENTRY_SELECT_WITH_REVIEW_LEGACY : ENTRY_SELECT_WITH_REVIEW)),
+      applicantColumnMissing ? Promise.resolve([]) : loadByApplicant(reviewColumnsMissing
+        ? (parentColumnMissing ? ENTRY_SELECT_BASE_LEGACY : ENTRY_SELECT_BASE)
+        : (parentColumnMissing ? ENTRY_SELECT_WITH_REVIEW_LEGACY : ENTRY_SELECT_WITH_REVIEW)),
     ]);
   }
   const merged = [...(byApplicant || []), ...(byIds || [])];
@@ -312,10 +326,17 @@ export async function getAdminSnapshot(env) {
   try {
     entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_WITH_REVIEW}&order=created_at.asc`);
   } catch (error) {
-    if (!isMissingEntryColumnError(error, "review_note") && !isMissingEntryColumnError(error, "reviewed_at")) {
+    const reviewColumnsMissing = isMissingEntryColumnError(error, "review_note") || isMissingEntryColumnError(error, "reviewed_at");
+    const parentColumnMissing = isMissingEntryColumnError(error, "parent_number");
+    if (!reviewColumnsMissing && !parentColumnMissing) {
       throw error;
     }
-    entries = await supabaseRequest(env, `${TABLES.entries}?select=${ENTRY_SELECT_BASE}&order=created_at.asc`);
+    entries = await supabaseRequest(
+      env,
+      `${TABLES.entries}?select=${reviewColumnsMissing
+        ? (parentColumnMissing ? ENTRY_SELECT_BASE_LEGACY : ENTRY_SELECT_BASE)
+        : ENTRY_SELECT_WITH_REVIEW_LEGACY}&order=created_at.asc`,
+    );
   }
   const [official, settingsRows] = await Promise.all([
     supabaseRequest(env, `${TABLES.official}?select=id,title,start_time,url,note,created_at&order=start_time.asc`),
@@ -395,6 +416,7 @@ export async function createPublicEntry(env, request, body) {
   const artist = String(body.artist || "").trim();
   const title = String(body.title || "").trim();
   const parentSlot = Number(body.parent_slot);
+  const parentNumber = Number(body.parent_number);
   const startTime = String(body.start_time || "").trim();
   const url = safeUrl(body.url, false);
   const note = String(body.note || "").trim();
@@ -408,6 +430,9 @@ export async function createPublicEntry(env, request, body) {
   }
   if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 12) {
     throw new HttpError(400, "枠は表示されている選択肢から選んでください。");
+  }
+  if (!Number.isInteger(parentNumber) || parentNumber < 1 || parentNumber > 5) {
+    throw new HttpError(400, "親は 1〜5 から選んでください。");
   }
   if (!okTime(startTime)) {
     throw new HttpError(400, "開始時刻の形式が正しくありません。");
@@ -432,6 +457,7 @@ export async function createPublicEntry(env, request, body) {
     artist,
     title,
     parent_slot: parentSlot,
+    parent_number: parentNumber,
     start_time: startTime,
     url,
     note,
@@ -461,7 +487,7 @@ export async function createPublicEntry(env, request, body) {
     });
     return { ok: true, entry: payload };
   } catch (error) {
-    const optionalColumnsMissing = ["review_note", "reviewed_at", "applicant_key"].some((column) => isMissingEntryColumnError(error, column));
+    const optionalColumnsMissing = ["review_note", "reviewed_at", "applicant_key", "parent_number"].some((column) => isMissingEntryColumnError(error, column));
     if (!optionalColumnsMissing) {
       throw error;
     }
@@ -479,6 +505,7 @@ export async function updatePublicEntry(env, request, body) {
   const artist = String(body.artist || "").trim();
   const title = String(body.title || "").trim();
   const parentSlot = Number(body.parent_slot);
+  const parentNumber = Number(body.parent_number);
   const startTime = String(body.start_time || "").trim();
   const url = safeUrl(body.url, false);
   const note = String(body.note || "").trim();
@@ -498,6 +525,9 @@ export async function updatePublicEntry(env, request, body) {
   }
   if (!Number.isInteger(parentSlot) || parentSlot < 1 || parentSlot > 12) {
     throw new HttpError(400, "枠は表示されている選択肢から選んでください。");
+  }
+  if (!Number.isInteger(parentNumber) || parentNumber < 1 || parentNumber > 5) {
+    throw new HttpError(400, "親は 1〜5 から選んでください。");
   }
   if (!okTime(startTime)) {
     throw new HttpError(400, "開始時刻の形式が正しくありません。");
@@ -519,10 +549,17 @@ export async function updatePublicEntry(env, request, body) {
     const migrationMissing = isMissingEntryColumnError(error, "review_note")
       || isMissingEntryColumnError(error, "reviewed_at")
       || isMissingEntryColumnError(error, "applicant_key");
-    if (!migrationMissing) {
-      throw error;
+    if (isMissingEntryColumnError(error, "parent_number") && !migrationMissing) {
+      rows = await supabaseRequest(
+        env,
+        `${TABLES.entries}?select=${ENTRY_SELECT_WITH_REVIEW_LEGACY},applicant_key&id=eq.${encodeURIComponent(id)}&limit=1`,
+      );
+    } else {
+      if (!migrationMissing) {
+        throw error;
+      }
+      throw new HttpError(409, "修正再申請を使うには、Supabase で supabase-migrate-review-notice.sql を実行してください。");
     }
-    throw new HttpError(409, "修正再申請を使うには、Supabase で supabase-migrate-review-notice.sql を実行してください。");
   }
 
   const current = rows?.[0];
@@ -551,6 +588,7 @@ export async function updatePublicEntry(env, request, body) {
     artist,
     title,
     parent_slot: parentSlot,
+    parent_number: parentNumber,
     start_time: startTime,
     url,
     note,
@@ -559,11 +597,24 @@ export async function updatePublicEntry(env, request, body) {
     reviewed_at: null,
   };
 
-  await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(payload),
-  });
+  try {
+    await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (!isMissingEntryColumnError(error, "parent_number")) {
+      throw error;
+    }
+    const legacyPayload = { ...payload };
+    delete legacyPayload.parent_number;
+    await supabaseRequest(env, `${TABLES.entries}?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(legacyPayload),
+    });
+  }
 
   return {
     ok: true,

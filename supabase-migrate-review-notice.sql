@@ -28,7 +28,7 @@ for insert
 to anon, authenticated
 with check (
   status = 'pending'
-  and parent_slot between 1 and 5
+  and parent_slot between 1 and 12
   and start_time ~ '^(?:[01]\\d|2[0-3]):[0-5]\\d$'
   and review_note = ''
   and reviewed_at is null
