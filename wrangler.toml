@@ -1,7 +1,69 @@
 name = "okome-pr"
 main = "worker/index.js"
-compatibility_date = "2026-03-29"
+compatibility_date = "2026-03-31"
 
 [assets]
 directory = "."
 binding = "ASSETS"
+
+# account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# workers_dev = true
+
+# Non-secret Worker vars:
+# Put only non-secret values here or in the Cloudflare dashboard Variables UI.
+# [vars]
+# SUPABASE_URL = "https://your-project.supabase.co"
+# DISCORD_REDIRECT_URI = "https://your-domain.example/api/admin/discord/callback"
+
+# Cloudflare Secrets Store bindings:
+# Create the account secret first, then bind it to the Worker using the same
+# binding name and secret name shown below. Docs:
+# https://developers.cloudflare.com/secrets-store/integrations/workers/
+#
+# [[secrets_store_secrets]]
+# binding = "ADMIN_SESSION_SECRET"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "ADMIN_SESSION_SECRET"
+#
+# [[secrets_store_secrets]]
+# binding = "ADMIN_GATE_PASSWORD"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "ADMIN_GATE_PASSWORD"
+#
+# [[secrets_store_secrets]]
+# binding = "ADMIN_REVIEW_PASSWORD"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "ADMIN_REVIEW_PASSWORD"
+#
+# [[secrets_store_secrets]]
+# binding = "DISCORD_CLIENT_ID"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "DISCORD_CLIENT_ID"
+#
+# [[secrets_store_secrets]]
+# binding = "DISCORD_CLIENT_SECRET"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "DISCORD_CLIENT_SECRET"
+#
+# [[secrets_store_secrets]]
+# binding = "SUPABASE_SERVICE_ROLE_KEY"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "SUPABASE_SERVICE_ROLE_KEY"
+#
+# [[secrets_store_secrets]]
+# binding = "APPLICANT_LOOKUP_SECRET"
+# store_id = "<your-secrets-store-id>"
+# secret_name = "APPLICANT_LOOKUP_SECRET"
+
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]
+
+# [observability]
+# enabled = true
+
+# [env.preview]
+# vars = { SUPABASE_URL = "https://preview-project.supabase.co" }
+
+# [env.production]
+# vars = { SUPABASE_URL = "https://production-project.supabase.co" }

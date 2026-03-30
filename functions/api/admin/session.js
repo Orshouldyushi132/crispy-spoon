@@ -2,8 +2,8 @@ import { getDiscordConfigState, isAdminApiConfigured, jsonResponse, publicSessio
 import { readAdminSession } from "../../_lib/session.js";
 
 export const onRequestGet = async (context) => {
-  const configured = isAdminApiConfigured(context.env);
-  const discordConfig = getDiscordConfigState(context.env);
+  const configured = await isAdminApiConfigured(context.env);
+  const discordConfig = await getDiscordConfigState(context.env);
   const session = discordConfig.configured ? await readAdminSession(context.request, context.env).catch(() => null) : null;
   return jsonResponse({
     ok: true,

@@ -1,12 +1,3 @@
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
-const ET = "kome_prerush_entries";
-const OT = "kome_prerush_official_videos";
-const ST = "kome_prerush_settings";
-const SID = "default";
-const LE = "kome_prerush_entries_local_v3";
-const LO = "kome_prerush_official_v1";
-const LS = "kome_prerush_settings_v1";
 const LF = "kome_prerush_viewer_favorites_v1";
 const LT = "kome_prerush_tracked_submission_ids_v1";
 const PUBLIC_API_BASE = "/api/public";
@@ -115,10 +106,6 @@ const els = {
   dockFavorite: $("dockFavoriteBtn"),
 };
 
-const shared = !!(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
-const previewMode = window.location.protocol === "file:";
-const sb = shared ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-
 const read = (key, fallback) => {
   try {
     const raw = localStorage.getItem(key);
@@ -143,7 +130,6 @@ let searchQuery = "";
 let laneFilter = "";
 let timeFilter = "";
 let currentNextKey = "";
-let sourceMode = previewMode ? "local" : "remote";
 let favorites = new Set(read(LF, []));
 let trackedSubmissionIds = cleanTrackedIds(read(LT, []));
 let editingEntryId = "";
@@ -379,198 +365,33 @@ async function api(path, init = {}) {
   return payload;
 }
 
-async function getEntriesDirect() {
-  if (shared) {
-    const primary = await sb.from(ET)
-      .select("id,artist,title,parent_slot,parent_slot_detail,parent_number,start_time,url,note,status,created_at")
-      .eq("status", "approved")
-      .order("start_time", { ascending: true });
-    if (!primary.error) return primary.data || [];
-    if (!String(primary.error?.message || "").includes("parent_number") && !String(primary.error?.message || "").includes("parent_slot_detail")) throw primary.error;
-    const fallback = await sb.from(ET)
-      .select("id,artist,title,parent_slot,start_time,url,note,status,created_at")
-      .eq("status", "approved")
-      .order("start_time", { ascending: true });
-    if (fallback.error) throw fallback.error;
-    return fallback.data || [];
-  }
-  return read(LE, []);
-}
-
-async function getOfficialDirect() {
-  if (shared) {
-    const { data, error } = await sb.from(OT)
-      .select("id,title,start_time,url,note,created_at")
-      .order("start_time", { ascending: true });
-    if (error) {
-      console.warn(error);
-      return [];
-    }
-    return data || [];
-  }
-  return read(LO, []);
-}
-
-async function getSettingsDirect() {
-  if (shared) {
-    const { data, error } = await sb.from(ST)
-      .select("id,event_date,official_name,official_url,event_hashtag,x_search_url,live_playlist_url,archive_playlist_url,entry_close_minutes")
-      .eq("id", SID)
-      .maybeSingle();
-    if (error) {
-      console.warn(error);
-      return normSettings(read(LS, DEFAULT_SETTINGS));
-    }
-    return normSettings(data || read(LS, DEFAULT_SETTINGS));
-  }
-  return normSettings(read(LS, DEFAULT_SETTINGS));
-}
-
 async function getSnapshot() {
-  if (!previewMode) {
-    try {
-      const payload = await api("/data");
-      sourceMode = "api";
-      return {
-        entries: payload.entries || [],
-        official: payload.official || [],
-        settings: normSettings(payload.settings || DEFAULT_SETTINGS),
-      };
-    } catch (error) {
-      if (!shared) throw error;
-    }
-  }
-  if (shared) {
-    sourceMode = "supabase";
-    const [entries, official, rawSettings] = await Promise.all([
-      getEntriesDirect(),
-      getOfficialDirect(),
-      getSettingsDirect(),
-    ]);
-    return { entries, official, settings: rawSettings };
-  }
-  sourceMode = "local";
+  const payload = await api("/data");
   return {
-    entries: read(LE, []),
-    official: read(LO, []),
-    settings: normSettings(read(LS, DEFAULT_SETTINGS)),
+    entries: payload.entries || [],
+    official: payload.official || [],
+    settings: normSettings(payload.settings || DEFAULT_SETTINGS),
   };
 }
 
 async function addEntry(entry) {
-  if (!previewMode) {
-    try {
-      await api("/entries", { method: "POST", body: JSON.stringify(entry) });
-      sourceMode = "api";
-      return;
-    } catch (error) {
-      if (!shared) throw error;
-    }
-  }
-  if (shared) {
-    const { error } = await sb.from(ET).insert(entry);
-    if (error) {
-      if (!String(error.message || "").includes("parent_number") && !String(error.message || "").includes("parent_slot_detail")) throw error;
-      const legacyEntry = { ...entry };
-      delete legacyEntry.parent_number;
-      delete legacyEntry.parent_slot_detail;
-      const retry = await sb.from(ET).insert(legacyEntry);
-      if (retry.error) throw retry.error;
-    }
-    sourceMode = "supabase";
-    return;
-  }
-  if (!previewMode) throw new Error("参加登録APIに接続できませんでした。");
-  const localEntries = read(LE, []);
-  localEntries.push(entry);
-  write(LE, localEntries);
-  sourceMode = "local";
+  await api("/entries", { method: "POST", body: JSON.stringify(entry) });
 }
 
 async function updateEntry(entry) {
-  if (!previewMode) {
-    try {
-      await api("/entries", { method: "POST", body: JSON.stringify({ ...entry, action: "update" }) });
-      sourceMode = "api";
-      return;
-    } catch (error) {
-      if (!shared) throw error;
-    }
-  }
-  if (shared) {
-    const { error } = await sb.from(ET)
-      .update({
-        artist: entry.artist,
-        title: entry.title,
-        parent_slot: entry.parent_slot,
-        parent_slot_detail: entry.parent_slot_detail,
-        parent_number: entry.parent_number,
-        start_time: entry.start_time,
-        url: entry.url,
-        note: entry.note,
-        status: "pending",
-      })
-      .eq("id", entry.id)
-      .eq("status", "rejected");
-    if (error) {
-      if (!String(error.message || "").includes("parent_number") && !String(error.message || "").includes("parent_slot_detail")) throw error;
-      const retry = await sb.from(ET)
-        .update({
-          artist: entry.artist,
-          title: entry.title,
-          parent_slot: entry.parent_slot,
-          start_time: entry.start_time,
-          url: entry.url,
-          note: entry.note,
-          status: "pending",
-        })
-        .eq("id", entry.id)
-        .eq("status", "rejected");
-      if (retry.error) throw retry.error;
-    }
-    sourceMode = "supabase";
-    return;
-  }
-  if (!previewMode) throw new Error("参加登録APIに接続できませんでした。");
-  const localEntries = read(LE, []);
-  const index = localEntries.findIndex((item) => String(item.id || "") === String(entry.id || ""));
-  if (index < 0) throw new Error("修正対象の参加登録が見つかりません。");
-  if (String(localEntries[index].status || "") !== "rejected") {
-    throw new Error("差し戻し済みの参加登録だけ修正できます。");
-  }
-  localEntries[index] = {
-    ...localEntries[index],
-    artist: entry.artist,
-    title: entry.title,
-    parent_slot: entry.parent_slot,
-    parent_slot_detail: entry.parent_slot_detail,
-    parent_number: entry.parent_number,
-    start_time: entry.start_time,
-    url: entry.url,
-    note: entry.note,
-    status: "pending",
-    review_note: "",
-    reviewed_at: null,
-  };
-  write(LE, localEntries);
-  sourceMode = "local";
+  await api("/entries", { method: "POST", body: JSON.stringify({ ...entry, action: "update" }) });
 }
 
 async function getTrackedEntries() {
-  if (!previewMode) {
-    try {
-      const payload = await api("/statuses", {
-        method: "POST",
-        body: JSON.stringify({ ids: trackedSubmissionIds }),
-      });
-      return Array.isArray(payload?.entries) ? payload.entries : [];
-    } catch (error) {
-      if (!shared) return [];
-    }
+  try {
+    const payload = await api("/statuses", {
+      method: "POST",
+      body: JSON.stringify({ ids: trackedSubmissionIds }),
+    });
+    return Array.isArray(payload?.entries) ? payload.entries : [];
+  } catch {
+    return [];
   }
-  return trackedSubmissionIds.length
-    ? read(LE, []).filter((item) => trackedSubmissionIds.includes(String(item.id || "")))
-    : [];
 }
 
 const merged = (approved, official, currentSettings) => [
@@ -926,19 +747,15 @@ function drawPending(entries, trackedEntries = []) {
     els.entryReviewNotice.textContent = String(latestReviewUpdate.review_note || DELETED_REVIEW_NOTE).trim();
   } else if (latestReviewUpdate?.status === "rejected") {
     els.entryReviewNotice.textContent = `差し戻しがありました。理由: ${String(latestReviewUpdate.review_note || "内容を確認して再申請してください。").trim()}`;
-  } else if (tracked.length) {
     els.entryReviewNotice.textContent = "この端末から送った参加登録の状態を表示しています。差し戻しがあった場合はここに理由も表示されます。";
   } else {
     els.entryReviewNotice.textContent = "この端末から送った参加登録の状態、または掲載済みの参加動画をここに表示します。ほかの未掲載申請は公開しません。";
   }
 
-  if (sourceMode === "local") {
-    const pendingLocal = entries.filter((item) => item.status !== "approved");
-    els.pending.innerHTML = pendingLocal.length
-      ? renderRows([...pendingLocal], true)
+  if (tracked.length) {
+    els.pending.innerHTML = tracked.length
+      ? renderRows([...tracked], true)
       : '<tr><td colspan="10" class="empty">まだ登録はありません。</td></tr>';
-  } else if (tracked.length) {
-    els.pending.innerHTML = renderRows([...tracked], true);
   } else {
     const approvedPreview = approvedEntries.slice(0, 8).map((item) => ({ ...item, status: "approved" }));
     els.pending.innerHTML = approvedPreview.length

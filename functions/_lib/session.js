@@ -1,7 +1,11 @@
-﻿const SESSION_COOKIE = "kome_admin_session";
+import { getConfigValue } from "./runtime-config.js";
+
+const SESSION_COOKIE = "kome_admin_session";
 const OAUTH_STATE_COOKIE = "kome_admin_oauth_state";
+const GATE_COOKIE = "kome_admin_gate";
 const SESSION_MAX_AGE = 60 * 60 * 12;
 const STATE_MAX_AGE = 60 * 10;
+const GATE_MAX_AGE = 60 * 60 * 12;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -67,31 +71,51 @@ async function verifySignedToken(secret, token) {
   return payload;
 }
 
-function requireSessionSecret(env) {
-  if (!env.ADMIN_SESSION_SECRET) {
+async function requireSessionSecret(env) {
+  const secret = await getConfigValue(env, "ADMIN_SESSION_SECRET");
+  if (!secret) {
     throw new Error("ADMIN_SESSION_SECRET is not configured.");
   }
-  return env.ADMIN_SESSION_SECRET;
+  return secret;
+}
+
+async function readSignedCookie(request, env, cookieName) {
+  const cookies = parseCookies(request.headers.get("Cookie") || "");
+  const secret = await requireSessionSecret(env);
+  return verifySignedToken(secret, cookies[cookieName]);
+}
+
+async function writeSignedCookie(headers, env, cookieName, payload, maxAge) {
+  const secret = await requireSessionSecret(env);
+  const token = await buildSignedToken(secret, {
+    ...payload,
+    expiresAt: Date.now() + maxAge * 1000,
+  });
+  headers.append("Set-Cookie", cookieString(cookieName, token, maxAge));
 }
 
 export async function readAdminSession(request, env) {
-  const cookies = parseCookies(request.headers.get("Cookie") || "");
-  const secret = requireSessionSecret(env);
-  return verifySignedToken(secret, cookies[SESSION_COOKIE]);
+  return readSignedCookie(request, env, SESSION_COOKIE);
 }
 
 export async function writeAdminSession(headers, env, session) {
-  const secret = requireSessionSecret(env);
-  const payload = {
-    ...session,
-    expiresAt: Date.now() + SESSION_MAX_AGE * 1000,
-  };
-  const token = await buildSignedToken(secret, payload);
-  headers.append("Set-Cookie", cookieString(SESSION_COOKIE, token, SESSION_MAX_AGE));
+  await writeSignedCookie(headers, env, SESSION_COOKIE, session, SESSION_MAX_AGE);
 }
 
 export function clearAdminSession(headers) {
   headers.append("Set-Cookie", cookieString(SESSION_COOKIE, "", 0));
+}
+
+export async function readAdminGate(request, env) {
+  return readSignedCookie(request, env, GATE_COOKIE);
+}
+
+export async function writeAdminGate(headers, env, gate) {
+  await writeSignedCookie(headers, env, GATE_COOKIE, gate, GATE_MAX_AGE);
+}
+
+export function clearAdminGate(headers) {
+  headers.append("Set-Cookie", cookieString(GATE_COOKIE, "", 0));
 }
 
 export function createOauthState() {

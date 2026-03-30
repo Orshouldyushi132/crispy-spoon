@@ -1,5 +1,5 @@
 .git/
-.gitignore
+.github/
 .wrangler/
 functions/
 worker/
@@ -7,3 +7,6 @@ README.md
 AGENTS.md
 wrangler.toml
 .assetsignore
+.gitignore
+*.md
+*.sql

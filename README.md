@@ -1,244 +1,166 @@
-# 米プレラ サイト構成
+# すべ米プレミアラッシュサイト
 
-このリポジトリは、公開ページ `index.html` と管理ページ `admin.html` を中心にした静的サイトです。
-公開ページは Cloudflare Workers / Pages Functions の公開 API を優先して使い、必要に応じて Supabase 公開キー直読みか `localStorage` にフォールバックします。管理ページは Cloudflare Workers / Pages Functions 経由で Discord 認証と審査操作を行います。
+Cloudflare Workers にデプロイする前提で整理した、静的 HTML 中心のイベントサイトです。
 
-## ファイル
+公開ページは `index.html`、管理ページは `admin.html` をそのまま編集できます。
+認証・審査・Supabase への読み書きは Worker API 側へ寄せてあり、ブラウザ側には秘密情報を置きません。
 
-- `index.html`: 一般公開ページ
-- `public.js`: 公開ページの表示、参加登録、検索、気になる保存
-- `admin.html`: 管理ページ UI
-- `admin.js`: 管理ページの Discord 認証フローと審査 UI
-- `functions/api/admin/*`: Pages Functions と Worker ルーターから呼び出す管理 API
-- `functions/api/public/*`: 公開ページが使う公開 API
-- `functions/_lib/*`: セッション管理と Supabase REST 共通処理
-- `worker/index.js`: `workers.dev` 用の API ルーター
-- `wrangler.toml`: Workers デプロイ設定
-- `.assetsignore`: Workers 配信から外すファイル一覧
-- `pickers.css` / `pickers.js`: カスタムピッカー UI
-- `motion.css` / `motion.js`: 背景やスクロール演出
+## 構成
 
-## できること
+- `index.html`
+  - 公開ページのマークアップ
+- `public.js`
+  - 公開ページ UI のみ
+  - データ取得と申請送信は `/api/public/*` 経由
+  - `localStorage` は「気になる登録」と「自分が送った申請ID」の保持だけに使用
+- `admin.html`
+  - 管理ページのマークアップ
+- `admin-gate.js`
+  - 管理ページ前段のパスワードゲート UI
+  - 照合は `/api/admin/gate` に POST して Worker 側で実施
+- `admin.js`
+  - Discord 認証、レビュー用パスワード解錠、審査 UI
+  - すべて `/api/admin/*` 経由
+- `functions/api/**`
+  - Worker から呼ばれる API ハンドラ
+- `functions/_lib/runtime-config.js`
+  - Cloudflare Variables / Secrets Store バインディングの吸収レイヤー
+- `functions/_lib/session.js`
+  - 署名付き Cookie と Discord OAuth 状態管理
+- `functions/_lib/admin-backend.js`
+  - Supabase REST API 呼び出しと入力検証
+- `worker/index.js`
+  - Workers ルーター
+  - `/admin` -> `admin.html`、`/` -> `index.html` の配信
+  - HTML 用セキュリティヘッダー付与
+- `wrangler.toml`
+  - Workers 用設定
+  - Secrets Store の差し込み位置をコメント付きで記載
 
-### 公開ページ
-- 参加者が曲を仮登録できる
-- 承認済みの参加動画をタイムテーブルに表示できる
-- 「全てお米の所為です。」の公式予定を同じタイムテーブルに混ぜて表示できる
-- 開催情報、初見向け説明、用語集、ルール、通知導線を表示できる
-- 検索、レーン絞り込み、時間帯絞り込み、気になる保存、`.ics` 保存が使える
-- Supabase 未設定時は `localStorage` だけで見た目確認ができる
+## 今回の整理内容
 
-### 管理ページ
-- Discord 認証のあとにレビュー用パスワードを入力して審査モードを開ける
-- 承認、差し戻し、削除、公式予定の追加削除、イベント設定変更ができる
-- 承認一覧の近くで、いまどの Discord アカウントでログインしているか確認できる
-- 管理操作は Cloudflare Functions から Supabase REST API に対して実行する
+### 1. Workers 前提に責務を整理
 
-## ローカル確認
+- 公開ページの Supabase 直読みとローカルフォールバックを削除
+- 公開ページは `/api/public/data`、`/api/public/entries`、`/api/public/statuses` だけを使う構成に変更
+- 管理ページの前段パスワードをクライアント側ハードコードから廃止
+- `/api/admin/gate` を追加して、管理ページ前段パスワードも Worker 側で照合
 
-### 公開ページだけ確認したいとき
+### 2. Secrets Store を使えるように整理
 
-同じオリジンで `/api/public/*` が動く環境なら、公開ページはそこから公開データ取得と参加登録送信を行います。
-HTML ファイルを単独で開くなど API がない確認環境では、`public.js` 先頭の `SUPABASE_URL` と `SUPABASE_ANON_KEY` が空のままなら `localStorage` モードで動きます。
-このとき使うキーは次のとおりです。
+- `functions/_lib/runtime-config.js` を追加
+- `env.MY_SECRET` が通常の文字列でも Secrets Store binding でも読めるように統一
+- これにより、Secrets Store の binding 名をそのまま
+  - `ADMIN_SESSION_SECRET`
+  - `ADMIN_GATE_PASSWORD`
+  - `ADMIN_REVIEW_PASSWORD`
+  - `DISCORD_CLIENT_ID`
+  - `DISCORD_CLIENT_SECRET`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `APPLICANT_LOOKUP_SECRET`
+  として使えます
 
-- `kome_prerush_entries_local_v3`
-- `kome_prerush_official_v1`
-- `kome_prerush_settings_v1`
-- `kome_prerush_viewer_favorites_v1`
-- `kome_prerush_tracked_submission_ids_v1`
+### 3. HTML は HTML のまま残す方針に整理
 
-### 管理ページも確認したいとき
+- ページ構造・文言・セクションは `index.html` / `admin.html` に残したままです
+- 認証や DB 接続の責務だけを Worker API 側へ移しました
 
-`admin.html` は `/api/admin/*` の Cloudflare Functions を前提にしています。
-HTML ファイルを単独で開くだけでは Discord 認証も審査操作も動きません。Cloudflare Pages か `wrangler dev` / `wrangler pages dev` など、API が同じオリジンで動く環境で確認してください。
+### 4. Workers 配信面を整理
 
-## 公開データを Supabase で共有する
+- `worker/index.js` にルーティングを集約
+- `/admin` で `admin.html` が開くように整備
+- `/api/*` は `Cache-Control: no-store`
+- HTML には Worker 側から CSP / `frame-ancestors 'none'` / `X-Frame-Options` などを付与
+- `.assetsignore` を見直して、ソース・SQL・README などを静的配信対象から除外
 
-Cloudflare / Workers でこのリポジトリを動かす場合、公開ページは `/api/public/*` を使うので `public.js` の公開キー設定は必須ではありません。
-静的配信だけで公開 API を使わずに動かしたい場合は、`public.js` の先頭にある次の値を設定します。
+## Cloudflare Workers 設定
 
-```js
-const SUPABASE_URL = "ここに Project URL";
-const SUPABASE_ANON_KEY = "ここに anon key";
-```
+### `wrangler.toml`
 
+`wrangler.toml` は Workers 用に整理済みです。
 
-SQL をそのまま流したい場合は、リポジトリ直下の supabase-setup.sql も使えます。
+- 実際に使う設定だけを有効化
+- 未入力の場所はコメントアウト
+- Secrets Store binding の例もコメント付きで記載
 
-### 作成するテーブル
+### Variables に入れる値
 
-```sql
-create table public.kome_prerush_entries (
-  id text primary key,
-  artist text not null check (char_length(artist) between 1 and 80),
-  title text not null check (char_length(title) between 1 and 120),
-  parent_slot integer not null check (parent_slot between 1 and 13),
-  parent_slot_detail text not null default '' check (char_length(parent_slot_detail) <= 80),
-  parent_number integer not null default 1 check (parent_number between 1 and 5),
-  start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
-  url text not null check (url ~ '^https?://'),
-  note text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'deleted')),
-  review_note text not null default '',
-  reviewed_at timestamptz,
-  applicant_key text,
-  created_at timestamptz not null default now()
-);
+秘密ではない値だけを Variables に入れます。
 
-create table public.kome_prerush_official_videos (
-  id text primary key,
-  title text not null check (char_length(title) between 1 and 120),
-  start_time text not null check (start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'),
-  url text,
-  note text,
-  created_at timestamptz not null default now()
-);
+- `SUPABASE_URL`
+  - 例: `https://your-project.supabase.co`
+- `DISCORD_REDIRECT_URI`
+  - 任意
+  - 未設定なら `https://<your-domain>/api/admin/discord/callback` を自動使用
 
-create table public.kome_prerush_settings (
-  id text primary key,
-  event_date text check (event_date is null or event_date ~ '^\d{4}-\d{2}-\d{2}$'),
-  official_name text not null,
-  official_url text not null check (official_url ~ '^https?://'),
-  event_hashtag text,
-  x_search_url text,
-  live_playlist_url text,
-  archive_playlist_url text,
-  entry_close_minutes integer not null default 15 check (entry_close_minutes between 5 and 120),
-  updated_at timestamptz not null default now()
-);
-```
+### Secrets Store に入れる値
 
-既存の Supabase プロジェクトを使っている場合も、この `supabase-setup.sql` をもう一度実行してください。`review_note` / `reviewed_at` / `applicant_key` 列に加えて、申請削除通知に使う `deleted` 状態と `parent_number` 列も反映されます。
+Secrets Store に secret を作り、Worker へ binding してください。
 
-`supabase-setup.sql` 全体ではなく差分だけを当てたいときは、`supabase-migrate-review-notice.sql` で列追加、`supabase-migrate-deleted-status.sql` で削除通知用の状態追加、`supabase-migrate-parent-number.sql` で親列追加、`supabase-migrate-secondary-slot.sql` で二次模倣用の枠補足列を反映できます。
+- `ADMIN_SESSION_SECRET`
+- `ADMIN_GATE_PASSWORD`
+- `ADMIN_REVIEW_PASSWORD`
+- `DISCORD_CLIENT_ID`
+- `DISCORD_CLIENT_SECRET`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APPLICANT_LOOKUP_SECRET`
 
-### 公開ページ向けの RLS
+`SUPABASE_URL` は secret ではないので Variables 側です。
+`SUPABASE_SERVICE_ROLE_KEY` は必ず Secrets Store 側に置いてください。
 
-```sql
-alter table public.kome_prerush_entries enable row level security;
-alter table public.kome_prerush_official_videos enable row level security;
-alter table public.kome_prerush_settings enable row level security;
+Cloudflare 公式:
+- https://developers.cloudflare.com/secrets-store/integrations/workers/
 
-create policy "public can read approved entries"
-on public.kome_prerush_entries
-for select
-to anon, authenticated
-using (status = 'approved');
+## Supabase 設定
 
-create policy "public can submit pending entries"
-on public.kome_prerush_entries
-for insert
-to anon, authenticated
-with check (
-  status = 'pending'
-  and parent_slot between 1 and 13
-  and parent_number between 1 and 5
-  and char_length(parent_slot_detail) <= 80
-  and start_time ~ '^(?:[01]\d|2[0-3]):[0-5]\d$'
-  and review_note = ''
-  and reviewed_at is null
-  and applicant_key is null
-);
+### 初回セットアップ
 
-create policy "public can read official videos"
-on public.kome_prerush_official_videos
-for select
-to anon, authenticated
-using (true);
+`supabase-setup.sql` を Supabase の SQL Editor で実行してください。
 
-create policy "public can read settings"
-on public.kome_prerush_settings
-for select
-to anon, authenticated
-using (true);
-```
+これで必要な主テーブルと初期設定が入ります。
 
-重要:
-- `anon` に `update` や `delete` を開けないでください。
-- 公開ページは承認済み `entries` だけ読む前提です。
-- 管理操作は後述の Cloudflare Functions + service role に寄せます。
+- `kome_prerush_entries`
+- `kome_prerush_official_videos`
+- `kome_prerush_settings`
+- `kome_prerush_admin_assignments`
 
-### 初期設定の例
+### 既存環境向け migration
 
-```sql
-insert into public.kome_prerush_settings (
-  id,
-  event_date,
-  official_name,
-  official_url,
-  event_hashtag,
-  x_search_url,
-  live_playlist_url,
-  archive_playlist_url,
-  entry_close_minutes
-) values (
-  'default',
-  '2026-08-18',
-  '全てお米の所為です。',
-  'https://www.youtube.com/@or_should_rice',
-  '#米プレラ',
-  '',
-  '',
-  '',
-  15
-)
-on conflict (id) do update
-set event_date = excluded.event_date,
-    official_name = excluded.official_name,
-    official_url = excluded.official_url,
-    event_hashtag = excluded.event_hashtag,
-    x_search_url = excluded.x_search_url,
-    live_playlist_url = excluded.live_playlist_url,
-    archive_playlist_url = excluded.archive_playlist_url,
-    entry_close_minutes = excluded.entry_close_minutes;
-```
+既存プロジェクトを追従させる場合は必要に応じて以下を実行します。
 
-## 管理ページを Cloudflare + Discord 認証で動かす
+- `supabase-migrate-review-notice.sql`
+- `supabase-migrate-deleted-status.sql`
+- `supabase-migrate-frame-slots.sql`
+- `supabase-migrate-parent-number.sql`
+- `supabase-migrate-secondary-slot.sql`
+- `supabase-migrate-admin-crew.sql`
 
-管理ページは `functions/api/admin/*` を通して動きます。
-このリポジトリには `worker/index.js` と `wrangler.toml` も含めてあり、`workers.dev` へ出す場合でも `/api/admin/*` が 404 にならないようにしてあります。
-ブラウザから直接 Supabase の管理権限を持たせず、Cloudflare Functions 側で Discord 認証済みセッションとレビュー用パスワードを確認してから、Supabase REST API に service role で接続します。
+## デプロイ手順
 
-### Cloudflare に設定する環境変数
+1. Supabase で `supabase-setup.sql` を実行
+2. Cloudflare Secrets Store に必要な secret を作成
+3. Worker に Secrets Store binding を追加
+4. Worker Variables に `SUPABASE_URL` などを設定
+5. Discord Developer Portal の Redirect URL を設定
+6. `npx wrangler deploy`
 
-- `ADMIN_SESSION_SECRET`: セッション Cookie 署名用の十分長いランダム文字列
-- `DISCORD_CLIENT_ID`: Discord アプリの Client ID
-- `DISCORD_CLIENT_SECRET`: Discord アプリの Client Secret
-- `DISCORD_REDIRECT_URI`: 任意。未設定なら `https://<your-domain>/api/admin/discord/callback`
-- `SUPABASE_URL`: Supabase Project URL
-- `SUPABASE_SERVICE_ROLE_KEY`: 管理 API 用の service role key
-- `APPLICANT_LOOKUP_SECRET`: 申請者の接続情報から本人確認用キーを生成するための秘密値
-- `ADMIN_REVIEW_PASSWORD`: 審査モード解錠用パスワード
+## ルーティング
 
-注意:
-- `SUPABASE_SERVICE_ROLE_KEY` は絶対にブラウザに出さないでください。
-- `APPLICANT_LOOKUP_SECRET` は `ADMIN_SESSION_SECRET` と別の長いランダム文字列を推奨します。
-- `ADMIN_REVIEW_PASSWORD` はコードの既定値に頼らず、必ず Cloudflare 側の環境変数で上書きしてください。
+- `/`
+  - `index.html`
+- `/admin`
+  - `admin.html`
+- `/api/public/*`
+  - 公開 API
+- `/api/admin/*`
+  - 管理 API
 
-### Discord Developer Portal 側で必要な設定
+## 補足
 
-Discord アプリの OAuth2 Redirects に、管理ページのコールバック URL を登録します。
-
-例:
-
-```text
-https://your-domain.example/api/admin/discord/callback
-```
-
-この構成では `identify` スコープを使って、ログイン中の Discord ユーザー情報を取得します。
-
-### 管理ページの流れ
-
-1. `Discordで認証` ボタンで Discord OAuth を開始する
-2. 認証後にレビュー用パスワード欄が有効になる
-3. 正しいパスワードを入力すると審査モードが開く
-4. 承認一覧の上に、現在操作中の Discord アカウントが表示される
-5. その状態で承認、差し戻し、削除、公式予定編集、イベント設定保存ができる
-
-## 注意
-
-- `public.js` の `SUPABASE_URL` / `SUPABASE_ANON_KEY` は公開用です。
-- `admin.js` に秘密鍵は入れません。管理操作は必ず `functions/` 経由で行います。
-- `admin.html` は Cloudflare Functions / Worker API と同じオリジンに置いてください。
-- Discord 認証とレビュー解錠が済むまでは、管理 UI は開かない設計です。
+- 公開ページは Worker API が前提です。`file://` 直開きでの完全動作は想定していません。
+- ブラウザ側に残している保存は、気になる一覧と申請追跡用 ID だけです。
+- 管理ページは
+  1. 前段ゲートパスワード
+  2. Discord 認証
+  3. レビューパスワード
+  の順で権限が上がります。

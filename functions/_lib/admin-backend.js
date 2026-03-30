@@ -1,3 +1,4 @@
+import { getRuntimeConfig } from "./runtime-config.js";
 import { readAdminSession } from "./session.js";
 
 const TABLES = {
@@ -45,23 +46,25 @@ export function errorResponse(message, status = 400) {
   return jsonResponse({ ok: false, error: message }, { status });
 }
 
-export function getDiscordConfigState(env) {
+export async function getDiscordConfigState(env) {
+  const config = await getRuntimeConfig(env);
   const missing = [];
-  if (!env.ADMIN_SESSION_SECRET) missing.push("ADMIN_SESSION_SECRET");
-  if (!env.DISCORD_CLIENT_ID) missing.push("DISCORD_CLIENT_ID");
-  if (!env.DISCORD_CLIENT_SECRET) missing.push("DISCORD_CLIENT_SECRET");
+  if (!config.ADMIN_SESSION_SECRET) missing.push("ADMIN_SESSION_SECRET");
+  if (!config.DISCORD_CLIENT_ID) missing.push("DISCORD_CLIENT_ID");
+  if (!config.DISCORD_CLIENT_SECRET) missing.push("DISCORD_CLIENT_SECRET");
   return {
     configured: missing.length === 0,
     missing,
   };
 }
 
-export function isDiscordConfigured(env) {
-  return getDiscordConfigState(env).configured;
+export async function isDiscordConfigured(env) {
+  return (await getDiscordConfigState(env)).configured;
 }
 
-export function isAdminApiConfigured(env) {
-  return Boolean(isDiscordConfigured(env) && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+export async function isAdminApiConfigured(env) {
+  const config = await getRuntimeConfig(env);
+  return Boolean((await isDiscordConfigured(env)) && config.SUPABASE_URL && config.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function safeUrl(value, allowEmpty = false) {
@@ -84,10 +87,6 @@ function okTime(value) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(value || ""));
 }
 
-function getApplicantSecret(env) {
-  return String(env.APPLICANT_LOOKUP_SECRET || env.ADMIN_SESSION_SECRET || "").trim();
-}
-
 function getApplicantFingerprint(request) {
   if (!request) return "";
   const ip = String(request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "")
@@ -99,7 +98,8 @@ ${ua}` : "";
 }
 
 async function deriveApplicantKey(request, env) {
-  const secret = getApplicantSecret(env);
+  const config = await getRuntimeConfig(env);
+  const secret = String(config.APPLICANT_LOOKUP_SECRET || config.ADMIN_SESSION_SECRET || "").trim();
   const fingerprint = getApplicantFingerprint(request);
   if (!secret || !fingerprint) return null;
   const digest = await crypto.subtle.digest(
@@ -110,8 +110,8 @@ ${fingerprint}`),
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
 
-function restBase(env) {
-  return `${String(env.SUPABASE_URL || "").replace(/\/$/, "")}/rest/v1`;
+function restBase(config) {
+  return `${String(config.SUPABASE_URL || "").replace(/\/$/, "")}/rest/v1`;
 }
 
 function friendlySupabaseError(text) {
@@ -136,16 +136,17 @@ function friendlySupabaseError(text) {
 }
 
 async function supabaseRequest(env, path, init = {}) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  const config = await getRuntimeConfig(env);
+  if (!config.SUPABASE_URL || !config.SUPABASE_SERVICE_ROLE_KEY) {
     throw new HttpError(500, "Supabase service role is not configured.");
   }
   const headers = new Headers(init.headers || {});
-  headers.set("apikey", env.SUPABASE_SERVICE_ROLE_KEY);
-  headers.set("Authorization", `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`);
+  headers.set("apikey", config.SUPABASE_SERVICE_ROLE_KEY);
+  headers.set("Authorization", `Bearer ${config.SUPABASE_SERVICE_ROLE_KEY}`);
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }
-  const response = await fetch(`${restBase(env)}/${path}`, {
+  const response = await fetch(`${restBase(config)}/${path}`, {
     ...init,
     headers,
   });
