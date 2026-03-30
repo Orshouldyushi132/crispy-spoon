@@ -65,13 +65,20 @@
     .stack-card.is-toggleable:hover{border-color:rgba(140,215,255,.18);transform:translateY(-1px)}
     .stack-card.is-toggleable:focus-visible{outline:none;border-color:rgba(140,215,255,.34);box-shadow:0 0 0 3px rgba(140,215,255,.12)}
     .stack-card.is-expanded{border-color:rgba(140,215,255,.28);box-shadow:0 0 0 1px rgba(140,215,255,.12) inset}
-    .stack-card-top,.stack-card-meta,.stack-card-action-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .stack-card-title{display:block;width:100%;margin:12px 0 0;color:var(--text)}
+    .stack-card-head,.stack-card-status,.stack-card-footer,.stack-card-action-group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .stack-card-head{justify-content:space-between;align-items:flex-start}
+    .stack-card-main{display:grid;gap:6px;margin-top:14px}
+    .stack-field-label{margin:0;color:var(--sub);font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .stack-card-title{display:block;width:100%;color:var(--text)}
     .stack-card-title.is-static{cursor:default}
     .stack-card-title-text{display:block;font-size:1.08rem;font-weight:900;line-height:1.32}
-    .stack-time{display:inline-flex;align-items:center;font-size:1rem;font-weight:900;letter-spacing:.02em;color:var(--text);padding:0 4px}
+    .stack-card-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px}
+    .stack-summary-item{padding:12px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03)}
+    .stack-summary-label{display:block;margin-bottom:4px;color:var(--sub);font-size:.7rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .stack-summary-value{display:block;color:var(--text);font-size:.96rem;font-weight:900;line-height:1.35;word-break:break-word}
+    .stack-time{font-size:1.05rem;letter-spacing:.02em}
     .stack-card-hint{margin-left:auto;color:var(--sub);font-size:.75rem;font-weight:800;letter-spacing:.04em}
-    .stack-card-meta{margin-top:10px}
+    .stack-card-footer{margin-top:14px}
     .stack-chip,.stack-meta,.stack-card-link{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.86rem;font-weight:800}
     .stack-meta{justify-content:flex-start;color:var(--text)}
     .stack-card-link{text-decoration:none;color:var(--cyan)}
@@ -270,6 +277,6 @@
 
   <script src="./pickers.js?v=3"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./admin.js?v=6"></script>
+  <script src="./admin.js?v=7"></script>
 </body>
 </html>

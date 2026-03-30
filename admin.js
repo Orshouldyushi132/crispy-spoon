@@ -144,7 +144,7 @@ function drawOfficial(list) {
       }
       detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="delete" data-odel="${esc(item.id)}">削除</button></div></div>`);
       const urlButton = safeUrl(item.url, true)
-        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URL未設定</span>';
       return `<tr class="stack-card-row"><td colspan="5"><article class="stack-card"><div class="stack-card-top"><span class="stack-chip">公式予定</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta">${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
     }).join("")
@@ -178,7 +178,7 @@ function drawEntries(list) {
       }
       detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button><button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button><button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></div></div>`);
       const urlButton = safeUrl(item.url, true)
-        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URLなし</span>';
       return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card"><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-chip">${esc(item.start_time)}</span></div><button type="button" class="stack-card-title" data-card-toggle aria-expanded="false"><span class="stack-card-title-text">${esc(item.title)}</span><span class="stack-card-toggle">詳細を開く</span></button><div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div><div class="stack-card-details" hidden>${detailParts.join("")}</div></article></td></tr>`;
     }).join("")
@@ -249,10 +249,11 @@ function drawOfficial(list) {
       }
       detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="delete" data-odel="${esc(item.id)}">削除</button></div></div>`);
       const urlButton = safeUrl(item.url, true)
-        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URL未設定</span>';
       const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
-      return `<tr class="stack-card-row"><td colspan="5"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-top"><span class="stack-chip">公式予定</span><span class="stack-time">${esc(item.start_time)}</span>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div>${titleHtml}<div class="stack-card-meta">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">区分</span><span class="stack-summary-value">公式予定</span></div></div>`;
+      return `<tr class="stack-card-row"><td colspan="5"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status"><span class="stack-chip">公式予定</span></div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">タイトル</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer">${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("")
     : '<tr><td colspan="5" class="empty">まだ公式予定はありません。</td></tr>';
   bindCardToggles(els.official);
@@ -284,10 +285,11 @@ function drawEntries(list) {
       }
       detailParts.push(`<div><p class="stack-detail-label">操作</p><div class="stack-card-action-group"><button class="approve" data-act="approve" data-id="${esc(item.id)}">掲載</button><button class="reject" data-act="reject" data-id="${esc(item.id)}">差し戻し</button><button class="delete" data-act="delete" data-id="${esc(item.id)}">削除</button></div></div>`);
       const urlButton = safeUrl(item.url, true)
-        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">URLへ</a>`
+        ? `<a class="stack-card-link" href="${esc(safeUrl(item.url, true))}" target="_blank" rel="noopener noreferrer">YouTubeへ</a>`
         : '<span class="small">URLなし</span>';
       const titleHtml = `<div class="stack-card-title${detailParts.length ? "" : " is-static"}"><span class="stack-card-title-text">${esc(item.title)}</span></div>`;
-      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-top">${statusBadge(item.status)}<span class="stack-chip">レーン${esc(item.parent_slot)}</span><span class="stack-time">${esc(item.start_time)}</span>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div>${titleHtml}<div class="stack-card-meta"><span class="stack-meta">${esc(item.artist)}</span>${urlButton}</div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
+      const summaryHtml = `<div class="stack-card-summary"><div class="stack-summary-item"><span class="stack-summary-label">開始</span><span class="stack-summary-value stack-time">${esc(item.start_time)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">レーン</span><span class="stack-summary-value">レーン${esc(item.parent_slot)}</span></div><div class="stack-summary-item"><span class="stack-summary-label">名義</span><span class="stack-summary-value">${esc(item.artist)}</span></div></div>`;
+      return `<tr class="stack-card-row"><td colspan="9"><article class="stack-card${detailParts.length ? " is-toggleable" : ""}"${detailParts.length ? ' data-card-toggle tabindex="0" role="button" aria-expanded="false"' : ""}><div class="stack-card-head"><div class="stack-card-status">${statusBadge(item.status)}</div>${detailParts.length ? '<span class="stack-card-hint">クリックで詳細</span>' : ""}</div><div class="stack-card-main"><p class="stack-field-label">曲名</p>${titleHtml}</div>${summaryHtml}<div class="stack-card-footer"><div class="stack-card-status">${urlButton}</div></div>${detailParts.length ? `<div class="stack-card-details" hidden>${detailParts.join("")}</div>` : ""}</article></td></tr>`;
     }).join("")
     : '<tr><td colspan="9" class="empty">まだ参加動画はありません。</td></tr>';
   bindCardToggles(els.admin);
