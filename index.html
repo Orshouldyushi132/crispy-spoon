@@ -8,12 +8,16 @@
   <title>米プレラ | タイムテーブル</title>
   <link rel="stylesheet" href="./pickers.css?v=4">
   <link rel="stylesheet" href="./motion.css?v=2">
+  <link rel="stylesheet" href="./intro.css?v=1">
+  <noscript><style>body.intro-active{overflow:auto}.site-intro{display:none!important}.wrap,.dock,.ambient-backdrop,.scroll-progress{opacity:1!important;filter:none!important;transform:none!important;pointer-events:auto!important}</style></noscript>
   <style>
     @font-face{font-family:"GenZenGothicKai";src:url("./assets/fonts/GenZenGothicKai.ttf") format("truetype");font-display:swap}
-    :root{--bg:#05070b;--bg2:#0f141c;--bg3:#151d27;--card:rgba(17,21,28,.88);--card2:rgba(20,25,34,.96);--line:rgba(255,255,255,.08);--text:#f4f7fb;--sub:#96a2b3;--cyan:#8cd7ff;--mint:#63e6cf;--amber:#f3b14a;--green:#62e0c2;--red:#ff8894;--shadow:0 28px 70px rgba(0,0,0,.45)}
+    @font-face{font-family:"NotoSansSymbols";src:url("./assets/fonts/NotoSansSymbols-Regular.ttf") format("truetype");font-display:swap}
+    @font-face{font-family:"NotoSansSymbols2";src:url("./assets/fonts/NotoSansSymbols2-Regular.ttf") format("truetype");font-display:swap}
+    :root{--bg:#05070b;--bg2:#0f141c;--bg3:#151d27;--card:rgba(17,21,28,.88);--card2:rgba(20,25,34,.96);--line:rgba(255,255,255,.08);--text:#f4f7fb;--sub:#96a2b3;--cyan:#8cd7ff;--mint:#63e6cf;--amber:#f3b14a;--green:#62e0c2;--red:#ff8894;--shadow:0 28px 70px rgba(0,0,0,.45);--body-font:"GenZenGothicKai","NotoSansSymbols2","NotoSansSymbols","Segoe UI Symbol","Segoe UI Historic","Yu Gothic UI","Yu Gothic","Meiryo",sans-serif}
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
-    body{margin:0;color:var(--text);font-family:"GenZenGothicKai","Yu Gothic","Meiryo",sans-serif;background:radial-gradient(circle at top left,rgba(140,215,255,.14),transparent 22%),radial-gradient(circle at top right,rgba(99,230,207,.1),transparent 18%),linear-gradient(160deg,var(--bg),var(--bg2) 56%,var(--bg3));min-height:100vh}
+    body{margin:0;color:var(--text);font-family:var(--body-font);background:radial-gradient(circle at top left,rgba(140,215,255,.14),transparent 22%),radial-gradient(circle at top right,rgba(99,230,207,.1),transparent 18%),linear-gradient(160deg,var(--bg),var(--bg2) 56%,var(--bg3));min-height:100vh;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
     a{color:inherit}
     .wrap{width:min(1180px,calc(100% - 28px));margin:24px auto 72px}
     .site-header,.toc-card{margin-bottom:18px;padding:18px 22px;background:rgba(10,14,20,.82);border:1px solid rgba(255,255,255,.08);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
@@ -230,7 +234,19 @@
     }
   </style>
 </head>
-<body>
+<body class="intro-active">
+  <div class="site-intro" id="siteIntro">
+    <div class="site-intro-media" aria-hidden="true">
+      <img class="site-intro-image" src="./assets/images/intro-key-visual.png" alt="" fetchpriority="high" decoding="async">
+      <div class="site-intro-orbit"></div>
+    </div>
+    <div class="site-intro-center">
+      <p class="site-intro-kicker">Rice Premiere Rush</p>
+      <p class="site-intro-title" id="siteIntroTitle">全てお米の所為です。</p>
+      <p class="site-intro-sub">米プレラのタイムテーブルへようこそ</p>
+      <p class="site-intro-skip">クリック、Enter、Esc でスキップ</p>
+    </div>
+  </div>
   <div class="wrap">
     <header class="site-header">
       <div class="site-brand">
@@ -695,7 +711,8 @@
   </nav>
 
   <script src="./pickers.js?v=6"></script>
+  <script src="./intro.js?v=1"></script>
   <script src="./motion.js?v=2"></script>
-  <script src="./public.js?v=21"></script>
+  <script src="./public.js?v=22"></script>
 </body>
 </html>

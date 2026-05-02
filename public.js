@@ -133,6 +133,7 @@ let currentNextKey = "";
 let favorites = new Set(read(LF, []));
 let trackedSubmissionIds = cleanTrackedIds(read(LT, []));
 let editingEntryId = "";
+let firstRenderCompleted = false;
 
 const saveTrackedSubmissionIds = () => write(LT, trackedSubmissionIds);
 const rememberTrackedSubmission = (id) => {
@@ -1038,6 +1039,10 @@ async function render() {
   drawNext();
   applyEntryFormMode();
   updateEntryHelper();
+  if (!firstRenderCompleted) {
+    firstRenderCompleted = true;
+    window.dispatchEvent(new Event("kome:public-ready"));
+  }
 }
 
 document.querySelectorAll("[data-filter]").forEach((button) => {
