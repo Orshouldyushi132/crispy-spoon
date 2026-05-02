@@ -16,7 +16,7 @@ const DELETED_ENTRY_NOTE = "あなたの動画申請は削除されました。"
 
 const DEFAULT_SETTINGS = {
   id: "default",
-  event_date: "2026-08-18",
+  event_date: "2026-08-08",
   official_name: "全てお米の所為です。",
   official_url: "https://www.youtube.com/@or_should_rice",
   event_hashtag: "",

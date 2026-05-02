@@ -4,7 +4,7 @@ const PUBLIC_API_BASE = "/api/public";
 const DELETED_REVIEW_NOTE = "あなたの動画申請は削除されました。";
 
 const DEFAULT_SETTINGS = {
-  event_date: "2026-08-18",
+  event_date: "2026-08-08",
   official_name: "全てお米の所為です。",
   official_url: "https://www.youtube.com/@or_should_rice",
   event_hashtag: "",

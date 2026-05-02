@@ -1,5 +1,5 @@
 const API_BASE = "/api/admin";
-const DEF = { event_date: "2026-08-18", official_name: "全てお米の所為です。", official_url: "https://www.youtube.com/@or_should_rice", event_hashtag: "", x_search_url: "", live_playlist_url: "", archive_playlist_url: "", entry_close_minutes: 15 };
+const DEF = { event_date: "2026-08-08", official_name: "全てお米の所為です。", official_url: "https://www.youtube.com/@or_should_rice", event_hashtag: "", x_search_url: "", live_playlist_url: "", archive_playlist_url: "", entry_close_minutes: 15 };
 const SLOT_LABELS = {
   1: "DSC枠",
   2: "逆再生枠",

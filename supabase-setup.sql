@@ -192,7 +192,7 @@ insert into public.kome_prerush_settings (
   entry_close_minutes
 ) values (
   'default',
-  '2026-08-18',
+  '2026-08-08',
   '全てお米の所為です。',
   'https://www.youtube.com/@or_should_rice',
   '#米プレラ',
