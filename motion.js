@@ -121,16 +121,57 @@
     return document.getElementById(id) || null;
   }
 
+  function waitForScrollSettled(callback,options={}){
+    const start=performance.now();
+    const minWait=options.minWait ?? 180;
+    const settleMs=options.settleMs ?? 140;
+    const maxWait=options.maxWait ?? 1800;
+    let lastX=window.scrollX;
+    let lastY=window.scrollY;
+    let lastMove=start;
+    let frame=0;
+
+    const finish=()=>{
+      if(frame) cancelAnimationFrame(frame);
+      callback();
+    };
+
+    const check=()=>{
+      const now=performance.now();
+      const x=window.scrollX;
+      const y=window.scrollY;
+      if(Math.abs(x-lastX)>.5||Math.abs(y-lastY)>.5){
+        lastX=x;
+        lastY=y;
+        lastMove=now;
+      }
+      if(now-start>=minWait&&(now-lastMove>=settleMs||now-start>=maxWait)){
+        finish();
+        return;
+      }
+      frame=requestAnimationFrame(check);
+    };
+
+    frame=requestAnimationFrame(check);
+  }
+
   function scheduleRipple(target,options={}){
     const host=resolveRippleHost(target);
     if(!host) return;
-    const oldTimer=rippleTimers.get(host);
-    if(oldTimer) window.clearTimeout(oldTimer);
-    const timer=window.setTimeout(()=>{
-      triggerRipple(host,options);
-      rippleTimers.delete(host);
-    },options.delay ?? 360);
-    rippleTimers.set(host,timer);
+    const oldState=rippleTimers.get(host);
+    if(oldState){
+      oldState.cancelled=true;
+      window.clearTimeout(oldState.timer);
+    }
+    const state={timer:0,cancelled:false};
+    state.timer=window.setTimeout(()=>{
+      waitForScrollSettled(()=>{
+        if(state.cancelled) return;
+        triggerRipple(host,options);
+        if(rippleTimers.get(host)===state) rippleTimers.delete(host);
+      },options);
+    },options.delay ?? 0);
+    rippleTimers.set(host,state);
   }
 
   function bindAnchorRipples(scope=document){
@@ -143,8 +184,7 @@
         if(!target) return;
         scheduleRipple(target,{
           clientX:event.clientX,
-          clientY:event.clientY,
-          delay:380
+          clientY:event.clientY
         });
       });
     });
