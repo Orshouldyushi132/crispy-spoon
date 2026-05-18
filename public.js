@@ -44,6 +44,11 @@ const els = {
   entryFormMode: $("entryFormMode"),
   entrySubmit: $("entrySubmitBtn"),
   entryReset: $("resetEntryFormBtn"),
+  entryStartDeadline: $("entryStartDeadline"),
+  entryStartAdvice: $("entryStartAdvice"),
+  jumpEntryForm: $("jumpEntryFormBtn"),
+  jumpEntryStatus: $("jumpEntryStatusBtn"),
+  entryStatusBlock: $("entryStatusBlock"),
   timeline: $("timeline"),
   nextTime: $("nextTime"),
   nextText: $("nextText"),
@@ -101,9 +106,9 @@ const els = {
   startTime: $("startTime"),
   urlInput: $("url"),
   noteInput: $("note"),
+  dockEntry: $("dockEntryBtn"),
   dockJump: $("dockJumpBtn"),
   dockWatch: $("dockWatchBtn"),
-  dockFavorite: $("dockFavoriteBtn"),
 };
 
 const read = (key, fallback) => {
@@ -173,6 +178,17 @@ const setStatus = (message, type = "") => {
   els.status.textContent = message;
   els.status.className = `status ${type}`.trim();
 };
+
+function jumpToEntryForm() {
+  document.getElementById("participants")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.setTimeout(() => {
+    els.artist?.focus({ preventScroll: true });
+  }, 320);
+}
+
+function jumpToEntryStatus() {
+  els.entryStatusBlock?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 const normSettings = (row) => ({
   event_date: String(row?.event_date || DEFAULT_SETTINGS.event_date).trim() || DEFAULT_SETTINGS.event_date,
@@ -1010,6 +1026,101 @@ function updateEntryHelper() {
   updatePromoTemplate();
 }
 
+function applyEntryFormMode() {
+  const editing = getEditableEntry();
+  if (editing) {
+    const reason = String(editing.review_note || "").trim();
+    els.entryFormMode.textContent = reason
+      ? `差し戻し内容を修正して再申請できます。理由: ${reason}`
+      : "差し戻し内容を修正して、もう一度送信できます。";
+    els.entryFormMode.className = "note form-mode is-editing";
+    els.entrySubmit.textContent = "修正して再申請";
+    els.entryReset.textContent = "編集をやめる";
+    if (els.entryStartAdvice) {
+      els.entryStartAdvice.textContent = "差し戻し済みの申請を編集中です。内容を整えて再申請できます。";
+    }
+    return;
+  }
+  editingEntryId = "";
+  els.entryFormMode.textContent = "YouTube のプレミア公開予約ができたら、そのまま必要事項を送信してください。";
+  els.entryFormMode.className = "note form-mode";
+  els.entrySubmit.textContent = "動画申し込みを送信";
+  els.entryReset.textContent = "入力をリセット";
+}
+
+function updateEntryReviewNotice(trackedEntries = []) {
+  const tracked = trackedEntries.filter((item) => item && item.id);
+  const latestReviewUpdate = [...tracked]
+    .filter((item) => String(item.status || "") === "rejected" || isDeletedEntryNotice(item))
+    .sort((a, b) => new Date(b.reviewed_at || b.created_at || 0) - new Date(a.reviewed_at || a.created_at || 0))[0] || null;
+
+  if (latestReviewUpdate && isDeletedEntryNotice(latestReviewUpdate)) {
+    els.entryReviewNotice.textContent = String(latestReviewUpdate.review_note || DELETED_REVIEW_NOTE).trim();
+    return;
+  }
+  if (latestReviewUpdate?.status === "rejected") {
+    els.entryReviewNotice.textContent = `差し戻しがありました。理由: ${String(latestReviewUpdate.review_note || "内容を確認して再申請してください。").trim()}`;
+    return;
+  }
+  els.entryReviewNotice.textContent = tracked.length
+    ? "この端末から送った参加登録の状態を表示しています。差し戻しがあった場合はここに理由も表示されます。"
+    : "この端末から送った参加登録の状態、または掲載済みの参加動画をここに表示します。ほかの未掲載申請は公開しません。";
+}
+
+function updateEntryHelper() {
+  const lane = Number(els.parentSlot.value || 0);
+  const time = String(els.startTime.value || "").trim();
+  const targetMinute = mins(time);
+  const deadline = entryDeadlineInfo(time);
+  const slotText = slotDisplayLabel(els.parentSlot.value, els.secondarySlotDetail?.value || "");
+  const parentText = parentLabel(els.parentNumber.value);
+
+  els.entryDeadlineText.textContent = deadline.text;
+  if (els.entryStartDeadline) {
+    els.entryStartDeadline.textContent = deadline.text;
+  }
+
+  if (!lane || !okTime(time)) {
+    const blankAdvice = "枠と開始時刻を選ぶと、被りや前後の余白、おすすめ候補をここで案内します。";
+    els.spacingAdviceText.textContent = blankAdvice;
+    els.suggestTimesText.textContent = "おすすめの空き候補をここに表示します。";
+    if (els.entryStartAdvice && !getEditableEntry()) {
+      els.entryStartAdvice.textContent = blankAdvice;
+    }
+    updatePromoTemplate();
+    return;
+  }
+
+  const sameLane = approvedEntries
+    .filter((item) => Number(item.parent_slot) === lane)
+    .sort((a, b) => mins(a.start_time) - mins(b.start_time));
+  const previous = sameLane.filter((item) => mins(item.start_time) < targetMinute).slice(-1)[0] || null;
+  const next = sameLane.find((item) => mins(item.start_time) > targetMinute) || null;
+  const exact = sameLane.find((item) => mins(item.start_time) === targetMinute) || null;
+  const nearby = schedule.filter((item) => Math.abs(mins(item.start_time) - targetMinute) <= 15);
+
+  if (exact) {
+    els.spacingAdviceText.textContent = "同じ枠・同じ開始時刻に掲載済みの動画があります。別の時刻へずらしてから送信してください。";
+  } else {
+    const prevText = previous ? `前の予定は ${previous.start_time} です` : "前には同じ枠の予定がありません";
+    const nextText = next ? `次の予定は ${next.start_time} です` : "後ろには同じ枠の予定がありません";
+    els.spacingAdviceText.textContent = `${prevText} / ${nextText} / 前後15分には ${nearby.length} 件あります。`;
+  }
+
+  const picks = recommendTimes(lane, targetMinute);
+  els.suggestTimesText.textContent = picks.length
+    ? `空けやすい候補: ${picks.join(" / ")}`
+    : "おすすめ候補は見つかりませんでした。";
+
+  if (els.entryStartAdvice && !getEditableEntry()) {
+    els.entryStartAdvice.textContent = exact
+      ? `${slotText} / 親${parentText || "-"} / ${time} はすでに近い予定があります。別の時刻がおすすめです。`
+      : `${slotText} / 親${parentText || "-"} / ${time} を入力中です。${picks.length ? `空けやすい候補: ${picks.join(" / ")}` : "前後の余白を見ながら調整できます。"}`;
+  }
+
+  updatePromoTemplate();
+}
+
 async function copyPromoTemplate() {
   const ok = await copyText(els.promoTemplate.value || "");
   flashLabel(els.copyPromo, ok ? "コピーしました" : "コピーできませんでした");
@@ -1035,6 +1146,7 @@ async function render() {
   schedule = merged(approvedEntries, officialSchedule, settings);
   drawTimeline(schedule);
   drawPending(entries, trackedEntriesCache);
+  updateEntryReviewNotice(trackedEntriesCache);
   drawSummary(approvedEntries, officialSchedule, schedule, settings);
   drawNext();
   applyEntryFormMode();
@@ -1105,6 +1217,8 @@ els.nextShare.addEventListener("click", () => {
 els.downloadFavorites.addEventListener("click", () => downloadCalendar(schedule, "favorites"));
 els.downloadAll.addEventListener("click", () => downloadCalendar(schedule, "all"));
 els.copyPromo.addEventListener("click", copyPromoTemplate);
+els.jumpEntryForm?.addEventListener("click", jumpToEntryForm);
+els.jumpEntryStatus?.addEventListener("click", jumpToEntryStatus);
 
 [els.artist, els.titleInput, els.parentSlot, els.parentNumber, els.startTime, els.urlInput, els.noteInput, els.secondarySlotDetail].forEach((element) => {
   element?.addEventListener("input", updateEntryHelper);
@@ -1206,6 +1320,7 @@ els.form.addEventListener("submit", async (event) => {
       setStatus("参加登録を送信したよ。確認が通るとタイムテーブルに載ります。", "ok");
     }
     await render();
+    jumpToEntryStatus();
   } catch (error) {
     setStatus(`送信に失敗したよ: ${error.message || error}`, "err");
   }
@@ -1218,13 +1333,7 @@ els.entryReset.addEventListener("click", () => {
 });
 
 els.dockJump.addEventListener("click", () => els.jumpUpcoming.click());
-els.dockFavorite.addEventListener("click", () => {
-  filterState = "favorites";
-  syncFilterButtons();
-  drawTimeline(schedule);
-  drawSearchSummary(schedule);
-  document.getElementById("timetable").scrollIntoView({ behavior: "smooth", block: "start" });
-});
+els.dockEntry?.addEventListener("click", jumpToEntryForm);
 
 syncSecondarySlotField();
 render().catch((error) => setStatus(`読み込みに失敗したよ: ${error.message || error}`, "err"));
