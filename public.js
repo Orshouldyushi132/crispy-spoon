@@ -180,7 +180,9 @@ const setStatus = (message, type = "") => {
 };
 
 function jumpToEntryForm() {
+  const target = els.form || document.getElementById("participants");
   document.getElementById("participants")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.triggerSectionRipple?.(target, { delay: 360 });
   window.setTimeout(() => {
     els.artist?.focus({ preventScroll: true });
   }, 320);
@@ -188,6 +190,7 @@ function jumpToEntryForm() {
 
 function jumpToEntryStatus() {
   els.entryStatusBlock?.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.triggerSectionRipple?.(els.entryStatusBlock, { delay: 320 });
 }
 
 const normSettings = (row) => ({
@@ -700,6 +703,7 @@ function startEditingEntry(id) {
   applyEntryFormMode();
   setStatus("差し戻し内容を修正して、もう一度送信できます。");
   els.form.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.triggerSectionRipple?.(els.form, { delay: 340 });
   els.titleInput.focus({ preventScroll: true });
 }
 
@@ -1202,6 +1206,7 @@ els.jumpUpcoming.addEventListener("click", () => {
   const target = els.timeline.querySelector(".item.upcoming") || els.timeline.querySelector(".item");
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.triggerSectionRipple?.(target, { delay: 300 });
   target.animate?.(
     [{ transform: "scale(1)" }, { transform: "scale(1.01)" }, { transform: "scale(1)" }],
     { duration: 420, easing: "ease-out" },
