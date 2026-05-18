@@ -60,6 +60,19 @@
     .entry-route{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
     .entry-helper-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .card{padding:22px}
+    .entry-start-card{position:relative;overflow:hidden;background:
+      radial-gradient(circle at top right,rgba(255,227,146,.24),transparent 26%),
+      radial-gradient(circle at bottom left,rgba(243,177,74,.15),transparent 24%),
+      linear-gradient(155deg,rgba(43,32,10,.98),rgba(19,15,8,.94) 58%,rgba(14,12,9,.9));border-color:rgba(243,177,74,.26);box-shadow:0 30px 80px rgba(0,0,0,.46),0 0 0 1px rgba(243,177,74,.08) inset}
+    .entry-start-card:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.08),transparent 38%),radial-gradient(circle at 82% 18%,rgba(255,241,197,.1),transparent 18%);pointer-events:none}
+    .entry-start-card>*{position:relative;z-index:1}
+    .entry-start-card .eyebrow,.entry-start-card .entry-helper-label{color:#ffd982}
+    .entry-start-card .notice{background:rgba(243,177,74,.12);border-color:rgba(243,177,74,.24)}
+    .entry-start-card .guide,.entry-start-card .entry-cta-card,.entry-start-card .entry-helper-item,.entry-start-card .entry-check{background:rgba(255,244,214,.04);border-color:rgba(255,224,148,.12)}
+    .entry-start-card .small,.entry-start-card .entry-jump-note,.entry-start-card .entry-check-body p{color:#d2c6aa}
+    .entry-start-card .hero-link.primary{background:linear-gradient(90deg,#ffd46a,#f3b14a);color:#1f1606}
+    .entry-start-card .hero-link.ghost{background:rgba(255,241,201,.05);border-color:rgba(255,224,148,.12)}
+    .entry-start-card .entry-check-mark{background:rgba(243,177,74,.16);border-color:rgba(255,212,106,.24);color:#ffd46a}
     .section{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:10px}
     .count-wrap{display:grid;gap:8px;margin:18px 0 14px;padding:16px 18px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))}
     .count-label{margin:0;color:var(--sub);font-size:.78rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
@@ -282,6 +295,82 @@
       </nav>
     </header>
 
+    <section class="card anchor-section entry-start-card" id="entry-start">
+      <div class="section">
+        <div>
+          <p class="eyebrow">Entry Start</p>
+          <h2>初めての動画登録はここから</h2>
+        </div>
+      </div>
+      <div class="entry-launchpad">
+        <article class="entry-cta-card">
+          <div>
+            <p class="notice">YouTube の予約URL、枠、親、開始時刻が決まっていれば、このページからそのまま申し込めます。</p>
+            <p class="small">初参加向けに、最短の流れと送信前チェックを先頭へまとめています。</p>
+          </div>
+          <div class="entry-route">
+            <div class="guide">
+              <strong>1. 予約URLを用意</strong>
+              <p class="small">プレミア公開ページの URL を控えます。</p>
+            </div>
+            <div class="guide">
+              <strong>2. 枠・親・開始時刻を決める</strong>
+              <p class="small">被りや締切はこのページが補助します。</p>
+            </div>
+            <div class="guide">
+              <strong>3. 下のフォームから送信</strong>
+              <p class="small">送信後の審査状況もこの端末で追えます。</p>
+            </div>
+          </div>
+        </article>
+        <article class="entry-cta-card">
+          <div>
+            <p class="eyebrow" style="margin-bottom:8px">Ready</p>
+            <h3>今すぐ申し込む前のチェック</h3>
+            <p class="entry-jump-note">予約済みなら、すぐ下のフォームへ進んで大丈夫です。差し戻しがあった場合も、このページから修正して再申請できます。</p>
+          </div>
+          <div class="entry-checklist">
+            <div class="entry-check">
+              <span class="entry-check-mark">1</span>
+              <div class="entry-check-body">
+                <strong>公開URLを手元に用意</strong>
+                <p>視聴者がそのまま飛べるプレミア公開ページの URL を使います。</p>
+              </div>
+            </div>
+            <div class="entry-check">
+              <span class="entry-check-mark">2</span>
+              <div class="entry-check-body">
+                <strong>枠と親を決める</strong>
+                <p>枠は動画の系譜、親は待機時間です。</p>
+              </div>
+            </div>
+            <div class="entry-check">
+              <span class="entry-check-mark">3</span>
+              <div class="entry-check-body">
+                <strong>送信後はこの端末で状態確認</strong>
+                <p>審査待ち、掲載中、差し戻しをここで確認できます。</p>
+              </div>
+            </div>
+          </div>
+          <div class="entry-helper-grid">
+            <div class="entry-helper-item">
+              <span class="entry-helper-label">締切の目安</span>
+              <p id="entryStartDeadline">開始時刻を選ぶと、締切の目安がここに反映されます。</p>
+            </div>
+            <div class="entry-helper-item">
+              <span class="entry-helper-label">入力中のアドバイス</span>
+              <p id="entryStartAdvice">枠と時刻を選ぶと、被りや空き候補の目安をここに表示します。</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="hero-link primary" id="jumpEntryFormBtn">すぐ申し込む</button>
+            <button type="button" class="hero-link ghost" id="jumpEntryStatusBtn">送信後の状態を見る</button>
+            <a class="hero-link ghost" href="#rules">ルールを確認</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="toc-card">
       <div class="toc-head">
         <div>
@@ -328,82 +417,6 @@
           <li>19:00〜24:00にかけてプレミアラッシュを実施。</li>
           <li>「全てお米の所為です。」として公開される合作曲などの関連動画を、曲数に合わせて19:00〜24:00の間にプレミア公開。</li>
         </ul>
-      </div>
-    </section>
-
-    <section class="card anchor-section" id="entry-start" style="margin-top:18px">
-      <div class="section">
-        <div>
-          <p class="eyebrow">Entry Start</p>
-          <h2>初めての動画登録はここから</h2>
-        </div>
-      </div>
-      <div class="entry-launchpad">
-        <article class="entry-cta-card">
-          <div>
-            <p class="notice">このページに来たら、まずは YouTube の予約URL、枠、親、開始時刻が決まっていればそのまま申し込めます。</p>
-            <p class="small">初参加でも迷いにくいように、最短の流れと送信前チェックを最初にまとめています。</p>
-          </div>
-          <div class="entry-route">
-            <div class="guide">
-              <strong>1. プレミア公開を予約する</strong>
-              <p class="small">YouTube でプレミア公開を予約し、視聴ページの URL を控えます。ここができていれば、もう申し込み準備は半分完了です。</p>
-            </div>
-            <div class="guide">
-              <strong>2. 枠・親・開始時刻を決める</strong>
-              <p class="small">タイムテーブルとルールを見ながら、枠と開始時刻を決めます。被りや締切の目安はこのページが補助します。</p>
-            </div>
-            <div class="guide">
-              <strong>3. このページから送信する</strong>
-              <p class="small">投稿名義、タイトル、URL を入力して送信すれば完了です。送信後の審査状況もこの端末から確認できます。</p>
-            </div>
-          </div>
-        </article>
-        <article class="entry-cta-card">
-          <div>
-            <p class="eyebrow" style="margin-bottom:8px">Ready</p>
-            <h3>今すぐ申し込む前のチェック</h3>
-            <p class="entry-jump-note">予約済みなら、すぐ下のフォームへ進んで大丈夫です。送信後はこのページで審査状況と差し戻し理由も追えます。</p>
-          </div>
-          <div class="entry-checklist">
-            <div class="entry-check">
-              <span class="entry-check-mark">1</span>
-              <div class="entry-check-body">
-                <strong>公開URLを手元に用意</strong>
-                <p>視聴者がそのまま飛べるプレミア公開ページの URL を使います。</p>
-              </div>
-            </div>
-            <div class="entry-check">
-              <span class="entry-check-mark">2</span>
-              <div class="entry-check-body">
-                <strong>枠と親を決める</strong>
-                <p>枠は動画の系譜、親は待機時間です。迷ったら下の説明を見ながら選べます。</p>
-              </div>
-            </div>
-            <div class="entry-check">
-              <span class="entry-check-mark">3</span>
-              <div class="entry-check-body">
-                <strong>送信後はこの端末で状態確認</strong>
-                <p>審査待ち、掲載中、差し戻しがこの端末から見られます。差し戻し時は修正して再申請できます。</p>
-              </div>
-            </div>
-          </div>
-          <div class="entry-helper-grid">
-            <div class="entry-helper-item">
-              <span class="entry-helper-label">締切の目安</span>
-              <p id="entryStartDeadline">開始時刻を選ぶと、締切の目安がここに反映されます。</p>
-            </div>
-            <div class="entry-helper-item">
-              <span class="entry-helper-label">入力中のアドバイス</span>
-              <p id="entryStartAdvice">枠と時刻を選ぶと、被りや空き候補の目安をここに表示します。</p>
-            </div>
-          </div>
-          <div class="actions">
-            <button type="button" class="hero-link primary" id="jumpEntryFormBtn">すぐ申し込む</button>
-            <button type="button" class="hero-link ghost" id="jumpEntryStatusBtn">送信後の状態を見る</button>
-            <a class="hero-link ghost" href="#rules">ルールを確認</a>
-          </div>
-        </article>
       </div>
     </section>
 
