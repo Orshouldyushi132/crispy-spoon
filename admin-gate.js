@@ -4,8 +4,9 @@
   const form = document.getElementById("adminGateForm");
   const password = document.getElementById("adminGatePassword");
   const status = document.getElementById("adminGateStatus");
-  const scripts = ["./pickers.js?v=6", "./motion.js?v=2", "./admin.js?v=21"];
+  const scripts = ["./pickers.js?v=6", "./admin.js?v=23"];
   let scriptsLoaded = false;
+  let scriptsLoading = null;
 
   if (!gate || !shell || !form || !password || !status) return;
 
@@ -16,16 +17,26 @@
 
   const loadScripts = async () => {
     if (scriptsLoaded) return;
-    for (const src of scripts) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error(`${src} の読み込みに失敗しました。`));
-        document.body.appendChild(script);
-      });
+    if (scriptsLoading) return scriptsLoading;
+    scriptsLoading = (async () => {
+      for (const src of scripts) {
+        if (document.querySelector(`script[src="${src}"]`)) continue;
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`${src} の読み込みに失敗しました。`));
+          document.body.appendChild(script);
+        });
+      }
+      scriptsLoaded = true;
+    })();
+    try {
+      await scriptsLoading;
+    } catch (error) {
+      scriptsLoading = null;
+      throw error;
     }
-    scriptsLoaded = true;
   };
 
   const api = async (init = {}) => {

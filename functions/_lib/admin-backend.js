@@ -374,6 +374,13 @@ function isMissingEntryColumnError(error, column) {
   );
 }
 
+function isMissingTableError(error, table) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return error instanceof HttpError
+    && message.includes("table")
+    && message.includes(String(table || "").toLowerCase());
+}
+
 function isDeletedStatusConstraintError(error) {
   const message = String(error?.message || error || "").toLowerCase();
   return (
@@ -529,20 +536,31 @@ export async function getAdminSnapshot(env) {
 }
 
 export async function getCrewSnapshot(env, session) {
-  const ownRows = await supabaseRequest(
-    env,
-    `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&discord_user_id=eq.${encodeURIComponent(String(session.discordUser.id || ""))}&limit=1`,
-  );
-  const own = ownRows?.[0] ? normalizeCrewAssignment(ownRows[0]) : defaultCrewAssignment(session);
-  const entries = await supabaseRequest(
-    env,
-    `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&order=updated_at.desc.nullslast`,
-  );
-  return {
-    ok: true,
-    own,
-    entries: Array.isArray(entries) ? entries.map(normalizeCrewAssignment) : [],
-  };
+  try {
+    const ownRows = await supabaseRequest(
+      env,
+      `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&discord_user_id=eq.${encodeURIComponent(String(session.discordUser.id || ""))}&limit=1`,
+    );
+    const own = ownRows?.[0] ? normalizeCrewAssignment(ownRows[0]) : defaultCrewAssignment(session);
+    const entries = await supabaseRequest(
+      env,
+      `${TABLES.crew}?select=discord_user_id,discord_username,discord_global_name,credit_name,assigned_lanes,song_count,note,updated_at&order=updated_at.desc.nullslast`,
+    );
+    return {
+      ok: true,
+      own,
+      entries: Array.isArray(entries) ? entries.map(normalizeCrewAssignment) : [],
+    };
+  } catch (error) {
+    if (!isMissingTableError(error, TABLES.crew)) throw error;
+    return {
+      ok: true,
+      own: defaultCrewAssignment(session),
+      entries: [],
+      setupRequired: true,
+      message: "担当メモ用テーブルがまだありません。Supabase で supabase-migrate-admin-crew.sql を実行してください。",
+    };
+  }
 }
 
 export async function saveCrewAssignment(env, session, body) {
@@ -575,13 +593,18 @@ export async function saveCrewAssignment(env, session, body) {
     note,
     updated_at: new Date().toISOString(),
   };
-  await supabaseRequest(env, `${TABLES.crew}?on_conflict=discord_user_id`, {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify([payload]),
-  });
+  try {
+    await supabaseRequest(env, `${TABLES.crew}?on_conflict=discord_user_id`, {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify([payload]),
+    });
+  } catch (error) {
+    if (!isMissingTableError(error, TABLES.crew)) throw error;
+    throw new HttpError(409, "担当メモ用テーブルがまだありません。Supabase で supabase-migrate-admin-crew.sql を実行してください。");
+  }
   return {
     ok: true,
     assignment: normalizeCrewAssignment(payload),

@@ -215,6 +215,20 @@ function hasCrewAssignment(assignment = {}) {
   );
 }
 
+function defaultCrewAssignmentForSession() {
+  const discordUser = sessionState?.discordUser || {};
+  return {
+    discord_user_id: String(discordUser.id || ""),
+    discord_username: String(discordUser.username || ""),
+    discord_global_name: String(discordUser.global_name || ""),
+    credit_name: "",
+    assigned_lanes: "",
+    song_count: 1,
+    note: "",
+    updated_at: null,
+  };
+}
+
 function laneTextFromValues(values = []) {
   return values
     .map((value) => slotLabel(value))
@@ -316,6 +330,14 @@ function renderCrewList(entries = []) {
       : "";
     return `<article class="crew-item"><div class="crew-item-head"><div><strong>${esc(item.credit_name || "未設定")}</strong><p class="small">@${esc(item.discord_username || "")} / ${esc(accountName)}</p></div><span class="badge pending">${esc(String(item.song_count || 0))}曲担当</span></div><div class="crew-item-meta"><span><strong>担当枠</strong><br>${esc(item.assigned_lanes || "未設定")}</span><span><strong>更新</strong><br>${esc(formatDate(String(item.updated_at || "").slice(0, 10)) || "未更新")}</span></div>${noteBlock}</article>`;
   }).join("");
+}
+
+function renderCrewLoadFallback(message = "") {
+  const fallback = defaultCrewAssignmentForSession();
+  ownCrewAssignment = fallback;
+  fillCrewForm(fallback);
+  renderOwnCrewCard(fallback);
+  els.crewList.innerHTML = `<div class="crew-item"><span class="small">${esc(message || "担当情報を読み込めませんでした。時間を置いて再読み込みしてください。")}</span></div>`;
 }
 
 function bindCardToggles(scope) {
@@ -600,16 +622,20 @@ async function syncCrew(force = false) {
   }
   const reviewAccess = getReviewAccess();
   const crewKey = `${sessionState.discordUser.id}:${reviewAccess.checkedAt || sessionState.authorizedAt || "linked"}`;
-  if (!force && crewKey === crewReadyKey) return;
+  if (!force && crewKey === crewReadyKey) return null;
   const snapshot = await api("/crew");
   ownCrewAssignment = snapshot.own || {};
   fillCrewForm(ownCrewAssignment);
   renderOwnCrewCard(ownCrewAssignment);
   renderCrewList(Array.isArray(snapshot.entries) ? snapshot.entries : []);
+  if (snapshot.setupRequired) {
+    setMsg(els.crewStatus, snapshot.message || "担当メモ用テーブルの初期化が必要です。", "err");
+  }
   els.crewViewerHint.textContent = hasReviewAccess()
     ? "Discord 認証済みメンバーの担当枠・曲数・使用名義を一覧で確認できます。レビュー権限ロールがあるため、審査操作も利用できます。"
     : "Discord 認証だけで担当一覧を確認できます。承認や差し戻しなどの審査操作はレビュー権限ロールを持つアカウントだけに有効です。";
   crewReadyKey = crewKey;
+  return snapshot;
 }
 
 async function syncSession(force = false) {
@@ -617,11 +643,13 @@ async function syncSession(force = false) {
   applySessionUi(data);
   if (sessionState?.discordUser) {
     try {
-      await syncCrew(force);
-      setMsg(els.crewStatus, "");
+      const crewSnapshot = await syncCrew(force);
+      if (!crewSnapshot?.setupRequired) {
+        setMsg(els.crewStatus, "");
+      }
     } catch (error) {
       crewReadyKey = "";
-      renderCrewList([]);
+      renderCrewLoadFallback(error.message || String(error));
       setMsg(els.crewStatus, `担当情報の読み込みに失敗しました: ${error.message || error}`, "err");
     }
   }
